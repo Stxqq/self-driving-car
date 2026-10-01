@@ -10,6 +10,8 @@ const PAUSE_AFTER_RUN = 1.8;
 export const POPULATION = 60;
 export const EPISODE_SECONDS = 60;
 export const SPEEDS = [1, 4, 16, 64];
+// meters another car has to gain on the one in focus to take the camera
+const LEAD_MARGIN = 25;
 
 export const km = (meters) => (meters / 1000).toFixed(2);
 
@@ -78,9 +80,6 @@ export class WatchSession extends SoloSession {
     return this.brain;
   }
 
-  outputs() {
-    return this.brain.activations[this.brain.activations.length - 1];
-  }
 }
 
 /**
@@ -119,9 +118,6 @@ export class DriveSession extends SoloSession {
     return this.shadow;
   }
 
-  outputs() {
-    return this.pilot.output;
-  }
 }
 
 /**
@@ -170,10 +166,6 @@ export class TrainSession {
     return this.leader.brain;
   }
 
-  outputs() {
-    const acts = this.leader.brain.activations;
-    return acts[acts.length - 1];
-  }
 
   /** The brain worth keeping: last generation's winner, or the leader before there is one. */
   get best() {
@@ -186,7 +178,7 @@ export class TrainSession {
     while (this.pending >= DT) {
       // at 64x a slow machine can't keep up; drop the time rather than
       // let the backlog make every following frame slower
-      if (performance.now() - started > 12) {
+      if (performance.now() - started > 8) {
         this.pending = 0;
         break;
       }
@@ -194,7 +186,16 @@ export class TrainSession {
       this.pending -= DT;
       if (this.world.alive === 0 || this.world.time >= EPISODE_SECONDS) this.finishGeneration();
     }
-    this.leader = this.world.leader();
+    this.follow();
+  }
+
+  // The camera stays on one car until it goes out or another pulls clearly
+  // ahead. Following whoever leads this very frame swapped cars every few
+  // frames in a tight pack, and the view jittered between them.
+  follow() {
+    const leader = this.world.leader();
+    const current = this.leader;
+    if (!current.alive || (leader.alive && leader.best > current.best + LEAD_MARGIN)) this.leader = leader;
   }
 
   finishGeneration() {
