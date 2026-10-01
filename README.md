@@ -225,6 +225,17 @@ car typically reaches 6 km within ten generations and the number of cars
 still driving at the end of a five-minute round climbs from a handful to
 around half the field by generation twenty.
 
+What sixty cars and twenty generations don't find is overtaking. From
+random weights the field holds its lane and follows: in check runs it
+made 0.1 to 0.5 lane changes per km through generation fifteen, and the
+winner usually none, even with extra penalties for tailgating and for
+queueing beside a free lane (tried, measured, dropped). The shipped brain
+needed about 170 generations of 200 cars before lane changes paid off.
+**From pretrained** starts the first generation from the shipped brain
+and gentle mutations of it instead; that field changes lanes 2 to 4 times
+per km from the first rounds, and evolution goes on from there. The round
+summary under the chart shows the field's lane changes per km either way.
+
 <p align="center">
   <img src=".github/assets/train.png" width="880" alt="Train mode: an in-browser run a few minutes in, with the best and mean distance per generation">
 </p>
