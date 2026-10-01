@@ -11,7 +11,7 @@ export const CAR_SPEC = Object.freeze({
   maxBrake: 9,
   maxSteer: 0.55,
   steerRate: 1.6,
-  // grip limit; above this the front wheels can't turn any tighter
+  // cornering grip, m/s^2
   maxLateralAccel: 8,
   rollingResistance: 0.25,
   dragPerSpeed2: 0.0011,
@@ -20,7 +20,13 @@ export const CAR_SPEC = Object.freeze({
 /**
  * Kinematic bicycle model. Position is the center of the body, heading is
  * counterclockwise from +x. Controls are throttle and brake in [0, 1] and
- * steer in [-1, 1] (positive turns left).
+ * steer in [-1, 1], positive to the left.
+ *
+ * Steer asks for a fraction of the available cornering grip rather than a
+ * wheel angle. At 30 m/s the tires give out past about 1.5 degrees of
+ * lock, so a raw angle would leave the network a sliver of its output
+ * range to drive with on the highway; this way the same output means the
+ * same sideways pull at any speed, the way steer-by-wire systems scale it.
  */
 export class Car {
   constructor(x, y, heading, speed = 0, spec = CAR_SPEC) {
@@ -51,11 +57,8 @@ export class Car {
     if (v > 0) accel -= p.rollingResistance + p.dragPerSpeed2 * v * v;
     this.speed = clamp(v + accel * dt, 0, p.maxSpeed);
 
-    let target = this.steer * p.maxSteer;
-    if (v > 1) {
-      const gripLimit = Math.atan((p.maxLateralAccel * p.wheelbase) / (v * v));
-      target = clamp(target, -gripLimit, gripLimit);
-    }
+    const lateral = this.steer * p.maxLateralAccel;
+    const target = clamp(Math.atan((lateral * p.wheelbase) / Math.max(v * v, 1e-6)), -p.maxSteer, p.maxSteer);
     const maxDelta = p.steerRate * dt;
     this.steerAngle += clamp(target - this.steerAngle, -maxDelta, maxDelta);
 
@@ -65,6 +68,13 @@ export class Car {
     this.x += travel * Math.cos(this.heading + slip) * dt;
     this.y += travel * Math.sin(this.heading + slip) * dt;
     this.updatePolygon();
+  }
+
+  /** Current cornering as a fraction of the grip limit, in [-1, 1]. */
+  get turning() {
+    const p = this.spec;
+    const lateral = (Math.tan(this.steerAngle) * this.speed * this.speed) / p.wheelbase;
+    return clamp(lateral / p.maxLateralAccel, -1, 1);
   }
 
   updatePolygon() {
