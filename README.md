@@ -1,9 +1,9 @@
 # self-driving-car
 
-A small neural network that taught itself to drive a curvy three-lane highway through traffic, by evolution, in plain JavaScript.
+A small neural network that taught itself, by evolution, to drive a curvy three-lane highway through traffic: hold the lane, brake in time, and signal and overtake when the next lane is faster. Plain JavaScript.
 
 <p align="center">
-  <a href="https://stxqq.github.io/self-driving-car/"><img src=".github/assets/hero.gif" width="880" alt="The pretrained car overtaking traffic on a curving highway, with its sensor rays and the network that drives it"></a>
+  <a href="https://stxqq.github.io/self-driving-car/"><img src=".github/assets/hero.gif" width="880" alt="The pretrained car signaling and changing lanes to overtake slower traffic, its planned path curving into the next lane, next to the network that drives it"></a>
 </p>
 
 <p align="center">
@@ -20,49 +20,78 @@ become the parents of the next. The page lets you watch the trained driver,
 evolve your own from random weights in the browser, or take the wheel
 yourself while the network shows what it would have done.
 
-There is no library underneath: the road, the car, the sensors, the traffic,
-the network and the genetic algorithm are about 1,200 lines of ES modules
-that run unchanged in the browser and in Node.
+The driving is split the way a driver-assist system splits it. The network
+decides the pedal and which lane it wants to be in. A planner turns "the
+lane to the left" into a lane change: it blinks, waits for the gap, moves
+over on a smooth S-curve and settles in the center of the new lane. The
+blue ribbon on the page is that plan.
+
+There is no library underneath: the road, the car, the perception, the
+planner, the traffic, the network and the genetic algorithm are about
+1,300 lines of ES modules that run unchanged in the browser and in Node.
 
 ## How it works
 
 <p align="center">
-  <img src=".github/assets/how-it-works.png" width="880" alt="Diagram: sensors feed 32 inputs into a 32-20-10-2 network whose pedal and steer move the car every 1/60 s; each generation 60 cars drive one road, are scored by distance, and the best four seed the next">
+  <img src=".github/assets/how-it-works.png" width="880" alt="Diagram: a lane scan feeds 19 inputs into a 19-12-8-2 network whose pedal and lane outputs go to a planner that blinks, waits for a gap and steers an S-curve; each generation 60 cars drive one road, are scored by distance, and the best four seed the next">
 </p>
 
-Every 1/60 s the car reads its rays, the network turns 32 numbers into a
-pedal and a steering command, and the car moves. The values in the diagram
-are one real moment from the shipped brain, 20 seconds into a run.
+Every 1/60 s the car scans the lanes, the network turns 19 numbers into a
+pedal and a lane, the planner turns the lane into steering, and the car
+moves. The values in the diagram are one real moment from the shipped
+brain, a fifth of the way into a lane change.
 
 - **Road.** A seeded highway built from clothoids, so curvature ramps
-  smoothly and there are no kinks for the rays to trip on. It is generated
+  smoothly and there are no kinks to trip the steering. It is generated
   lazily as the car drives.
 - **Car.** A kinematic bicycle model in SI units (4.4 m long, 32 m/s top
   speed). Steer asks for a share of the available cornering grip rather than
   a wheel angle, so the same output means the same sideways pull at 30 km/h
-  and at 110 km/h.
-- **Sensors.** Eleven rays fan out ahead to 70 m, packed toward the nose,
-  and three mirror rays look back 40 m. Each ray also reports how fast its
-  reading is changing, because one frame of distances can't tell a parked
-  car from one doing 100 km/h.
-- **Traffic.** Background cars follow the Intelligent Driver Model, keep to
-  speed bands per lane and overtake on the left. Traffic never sees the
-  learning cars and never makes room for them. That keeps a seed fully
-  deterministic however many cars are learning on it, and it makes the task
-  harder: cars cut in ahead and occasionally run into you from behind.
+  and at 110 km/h. Take a 110 m bend at full speed and the grip runs out.
+- **Perception.** Not raw pixels or rays but what a camera stack hands its
+  planner: for the lane to the left, the car's own lane and the lane to the
+  right, whether the lane exists, the nearest car ahead and behind (up to
+  90 m and 45 m) and how fast each gap is closing. Plus speed, the sharpest
+  curve in the next 100 m, and the planner's state. 19 inputs.
+- **Network.** 19 · 12 · 8 · 2, tanh, 362 weights. Two outputs: the pedal,
+  and the lane, where above +0.5 asks for the lane to the left and below
+  −0.5 for the one to the right.
+- **Planner.** Hand-written, not learned. On a request it blinks for 0.7 s,
+  then moves over along a quintic S-curve (zero sideways speed and
+  acceleration at both ends) in 2.6 s, and steers along it with pure
+  pursuit about half a second ahead. Letting go of the request while it
+  blinks calls the change off. The one decision it makes on its own: it
+  won't start moving while a car in the target lane is level with it or
+  about to be, the way blind-spot monitoring holds a lane change; it keeps
+  blinking and goes when the gap opens. Everything else, including whether
+  to change lanes at all and how hard to brake for a car that cuts in, is
+  up to the network.
+- **Traffic.** Background cars follow the Intelligent Driver Model, want
+  speeds between 61 and 94 km/h with every lane mixing slow and fast,
+  overtake on the left and move back right once past. They blink for 1.2 s
+  before changing lanes and never look for the learning cars, which keeps a
+  seed fully deterministic however many cars are learning on it, and makes
+  the task harder: a car that cuts in is only announced by its indicator.
 - **Fitness.** Meters of road covered, minus 300 for crashing or for being
-  caught by a line that sweeps up the road at 18 km/h.
+  caught by a line that sweeps up the road at 18 km/h. Nothing rewards a
+  lane change as such; the network overtakes because it covers more road.
 - **Evolution.** Elitism (the best four carry over), tournament selection,
   BLX-0.25 blend crossover and gaussian mutation whose rate and size decay
   with a 40-generation half-life.
 
+Before the planner the network steered directly from a fan of ray sensors.
+It learned to hold a lane and to dodge, but it mostly sat in the fast lane
+behind whoever was there. With the steering handed to a planner, the search
+only has to find *when* and *where*, and overtaking became the thing that
+separates a good driver from a safe one.
+
 The simulation is deterministic down to the last bit: same seed, same
-brains, same trajectories, on every Node release from 20 to 25. (It avoids
-`**` in the physics for that reason; V8 changed its `pow` between releases.) The test suite
-replays all 30 held-out runs and checks them to the meter.
+brains, same trajectories. (It avoids `**` in the physics for that reason;
+V8 changed its `pow` between releases.) The test suite replays all 30
+held-out runs and checks them to the meter.
 
 <p align="center">
-  <img src=".github/assets/anatomy.png" width="440" alt="The page's spec sheet of the car in focus: sensors, network, controls, fitness, drawn live">
+  <img src=".github/assets/anatomy.png" width="440" alt="The page's spec sheet of the car in focus: lane scan, network, controls, planner, fitness, drawn live">
 </p>
 
 ## Quickstart
@@ -83,36 +112,38 @@ Training runs headless across worker threads. By default it writes to
 `runs/brain.json`, so it never touches the shipped brain:
 
 ```console
-$ node scripts/train.mjs --generations 15 --population 120 --seeds 3 --seconds 60 --density 0
-13 workers, population 120, 3 seeds x 60 s, traffic x0
+$ node scripts/train.mjs --generations 10 --population 120 --seeds 3 --seconds 60
+13 workers, population 120, 3 seeds x 60 s, traffic x1
  gen   best m   mean m  alive    mut     s
-   0      415       14      0  0.150   0.2
-   1      833       26      0  0.148   0.1
+   0     1344      351     22  0.150   0.3
+   1     1359      466     12  0.148   0.1
+   2     1204      452     17  0.146   0.1
    ...
-  13     1721      137      1  0.126   0.1
-  14     1124      105      0  0.124   0.1
-      validation 1406 m, saved runs/brain.json
-done in 0.0 min, best validation 1406 m
+   7     1287      650     15  0.136   0.1
+   8     1286      570     18  0.134   0.1
+   9     1356      691     17  0.133   0.1
+done in 0.0 min, best validation 1237 m
 ```
 
-`--density` scales the traffic, so a driver can learn to hold a lane at speed
-on an empty road before meeting anyone. `--resume` starts from the brain at
-`--out` with gentler mutation. The schedule behind the shipped brain is
-`scripts/curriculum.sh`: empty road, traffic faded in over four stages, then
-five-minute episodes on full traffic. Its last two stages took 10 and 18
-minutes on a 14-core laptop.
+Even generation 0 has cars that drive a full minute, because the planner
+keeps every one of them in its lane; the mean is what climbs. `--density`
+scales the traffic and `--resume` starts from the brain at `--out` with
+gentler mutation. The schedule behind the shipped brain is
+`scripts/curriculum.sh`: two-minute episodes in full traffic, then
+five-minute ones on more and more roads per generation. The whole thing
+took about 50 minutes on a 14-core laptop.
 
 To score a brain on roads it has never seen:
 
 ```console
 $ node scripts/evaluate.mjs --seeds 9001,9002,9003,9004,9005
- seed   meters      s   km/h  ended
- 9001     4716  300.0   56.6  time
- 9002     1792  119.8   53.8  crashed
- 9003     4659  300.0   55.9  time
- 9004     4723  300.0   56.7  time
- 9005     4739  300.0   56.9  time
-mean 4126 m, median 4716 m, 4 of 5 still on the road at the end
+ seed   meters      s   km/h  lanes  ended
+ 9001     7332  300.0   88.0     34  time
+ 9002     6790  300.0   81.5     28  time
+ 9003     7056  300.0   84.7     31  time
+ 9004     6478  300.0   77.7     27  time
+ 9005     7007  300.0   84.1     32  time
+mean 6933 m, median 7007 m, 5 of 5 still on the road at the end, 4.4 lane changes per km
 ```
 
 Brains trained in the page can be exported as JSON and loaded back with
@@ -120,35 +151,40 @@ Import, or passed to `evaluate.mjs --brain`.
 
 ## Results
 
-The shipped brain (`src/brains/pretrained.json`, 892 weights) on 30 seeds it
+The shipped brain (`src/brains/pretrained.json`, 362 weights) on 30 seeds it
 was never trained or validated on, five minutes each, full traffic:
 
-| | |
-|---|---|
-| Mean distance | 4.05 km |
-| Median distance | 4.66 km |
-| Still on the road after five minutes | 20 of 30 |
-| Average speed | 56 km/h |
-| Shortest run | 1.39 km |
+| | before (rays, steering) | now (lane scan, planner) |
+|---|---|---|
+| Mean distance | 4.05 km | 6.85 km |
+| Median distance | 4.66 km | 7.06 km |
+| Still on the road after five minutes | 20 of 30 | 27 of 30 |
+| Average speed | 56 km/h | 85 km/h |
+| Lane changes | – | 4.2 per km |
+| Shortest run | 1.39 km | 0.61 km |
+
+"Before" is the previous version of this project, a 32-20-10-2 network
+steering straight from 14 ray sensors, on the old traffic. The traffic is
+different now (every lane mixes slow and fast cars, and cars blink before
+moving over), so the two columns are not the same exam; the old driver
+mostly followed the fast lane, the new one overtakes about every 240 m.
 
 Every number comes from `npm run evaluate -- --write`, which writes
-`scripts/results.json`; the page reads the same file. A run that survives
-covers about 4.7 km, so the mean is pulled down by the ten crashes. It
-likes to live in the fast lane, and that is where all ten happen: seven are
-traffic changing lanes while level with it or just ahead (traffic doesn't
-look for it), three are slower cars in its lane that it brakes for too late.
-None of them is the road edge. Two runs out of three is an honest number for
-a 32-input network on roads it has never seen, and there is room to do
-better.
+`scripts/results.json`; the page reads the same file. Traffic tops out at
+94 km/h and the car at 115, so the average speed is what overtaking buys.
+Of the three crashes, one happens while moving over, the other two at full
+speed into slower traffic it brakes for too late, both in the last
+fifteen seconds. Nothing in the fitness asks it to keep right after an
+overtake, and it doesn't.
 
 <p align="center">
-  <img src=".github/assets/train.png" width="880" alt="Train mode: generation 31 of an in-browser run, with the best and mean distance per generation">
+  <img src=".github/assets/train.png" width="880" alt="Train mode: an in-browser run a few minutes in, with the best and mean distance per generation">
 </p>
 
 ## Project layout
 
 ```
-src/sim/       road, car, sensors, traffic, world, brain, evolution (no DOM)
+src/sim/       road, car, perception, planner, traffic, world, brain, evolution (no DOM)
 src/render/    canvas stage, network view, anatomy spec sheet, svg chart
 src/ui/        the page: sessions for watch, train and drive, storage, keys
 src/brains/    pretrained.json
@@ -158,11 +194,14 @@ test/          node:test suites, including the held-out replay
 
 ## Credits
 
-- The idea of a car with a fan of ray sensors feeding a small network, built
-  from scratch in the browser, is the one Radu Mariescu-Istodor made popular
-  with his JavaScript self-driving car course. This one swaps the fixed
-  track for a procedural highway with modeled traffic and evolves a whole
-  population, but the starting point is his.
+- The idea of a small network driving a car in the browser, built from
+  scratch, is the one Radu Mariescu-Istodor made popular with his
+  JavaScript self-driving car course; this project started from his ray
+  sensors. The split into perception, a learned decision and a planner
+  that blinks and steers is the shape of production driver-assist systems
+  such as Tesla Autopilot, not anything from their code.
+- Steering is pure pursuit, from Coulter, *Implementation of the Pure
+  Pursuit Path Tracking Algorithm* (CMU-RI-TR-92-01, 1992).
 - Traffic uses the Intelligent Driver Model from Treiber, Hennecke and
   Helbing, *Congested traffic states in empirical observations and
   microscopic simulations* (Phys. Rev. E, 2000).
