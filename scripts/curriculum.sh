@@ -13,3 +13,6 @@ node scripts/train.mjs --resume --seed 2 --generations 183 --population 200 --se
 # after the own lane started counting cars in the lane being left
 node scripts/train.mjs --resume --seed 4 --generations 200 --population 200 --seeds 8 --seconds 300 --out "$out" "$@"
 node scripts/train.mjs --resume --seed 5 --generations 150 --population 200 --seeds 12 --seconds 300 --out "$out" "$@"
+# fine-tune with the keep-right penalty in the fitness
+node scripts/train.mjs --resume --seed 6 --generations 150 --population 200 --seeds 8 --seconds 300 --out "$out" "$@"
+node scripts/train.mjs --resume --seed 7 --generations 100 --population 200 --seeds 12 --seconds 300 --out "$out" "$@"

@@ -227,7 +227,9 @@
         while a car is level with it in the target lane, moves over on a
         2.6 s S-curve and steers along it with pure pursuit. The blue
         ribbon is that plan. Whether to overtake, and whether the gap is
-        worth it, is the network's call alone.
+        worth it, is the network's call alone. Its score loses a little for
+        every second it cruises left of a free lane, so it learned to move
+        back right after passing.
       </p>
 
       <h2 class="dear section-gap">The trained driver</h2>
