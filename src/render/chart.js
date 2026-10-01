@@ -52,8 +52,6 @@ export function drawChart(svg, { series, reference = null, empty = "" }) {
 
   if (reference) {
     el("line", { x1: left, x2: width - right, y1: y(reference.value), y2: y(reference.value), class: "chart-ref" }, svg);
-    const label = el("text", { x: width - right, y: y(reference.value) - 4, class: "chart-tick", "text-anchor": "end" }, svg);
-    label.textContent = reference.label;
   }
 
   for (const { values, stroke, width: w = 1.5, dots = false } of series) {
@@ -64,5 +62,15 @@ export function drawChart(svg, { series, reference = null, empty = "" }) {
     if (dots || values.length === 1) {
       values.forEach((v, i) => el("circle", { cx: x(i), cy: y(v), r: 2.5, fill: "#fff", stroke, "stroke-width": 1.25 }, svg));
     }
+  }
+
+  // last, so nothing draws over it, and on the side of the dashed line
+  // the newest point isn't on
+  if (reference) {
+    const latest = series.map((s) => s.values[s.values.length - 1]).filter((v) => v !== undefined);
+    const below = latest.some((v) => v >= reference.value);
+    const ly = y(reference.value) + (below ? 11 : -4);
+    const label = el("text", { x: width - right, y: ly, class: "chart-tick chart-label", "text-anchor": "end" }, svg);
+    label.textContent = reference.label;
   }
 }

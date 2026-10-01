@@ -162,7 +162,7 @@ function updateChart(session) {
     spec = () => {
       $("#chart-title").textContent = "Held-out roads";
       $("#chart-note").textContent = results ? `${results.runs.length} seeds · ${results.limits.seconds / 60} min` : "";
-      legend.textContent = "The pretrained brain on roads it never trained on.";
+      legend.textContent = "The pretrained brain on roads it never saw.";
       return {
         series: [{ values: results ? results.runs.map((r) => r.meters) : [], stroke: "#111113", width: 1.25, dots: true }],
         reference: reference && { ...reference, label: `mean ${km(results.meanMeters)}` },
