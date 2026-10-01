@@ -154,7 +154,7 @@ export class TrainSession {
   }
 
   startGeneration() {
-    this.world = new World({ seed: this.rng.uint(), brains: this.evolution.population, density: this.density });
+    this.world = new World({ seed: this.rng.uint(), brains: this.evolution.population, density: this.density, grid: true });
     this.leader = this.world.drivers[0];
   }
 
@@ -200,7 +200,7 @@ export class TrainSession {
 
   finishGeneration() {
     const drivers = this.world.drivers;
-    const scores = drivers.map((d) => fitness({ distance: d.distance, crashed: d.crashed, stalled: d.stalled }));
+    const scores = drivers.map((d) => fitness({ distance: d.distance, crashed: d.crashed, stalled: d.stalled, lingered: d.lingered }));
     const distances = drivers.map((d) => d.distance);
     const summary = this.evolution.evolve(scores);
     this.champion = summary.champion;

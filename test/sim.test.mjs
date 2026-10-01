@@ -135,3 +135,20 @@ test("below the grip limit, the planner keeps a car within half a meter of its l
     assert.ok(worst < 0.5, `seed ${seed} drifted ${worst.toFixed(2)} m off center`);
   }
 });
+
+test("a grid start spreads the cars over lanes and rows, each measured from its own start", () => {
+  const world = new World({ seed: 3, brains: randomBrains(9, 4), grid: true });
+  const spots = new Set(world.drivers.map((d) => `${d.planner.lane}:${d.s}`));
+  assert.equal(spots.size, 9);
+  assert.ok(world.drivers.every((d) => d.distance === 0));
+  const front = Math.max(...world.drivers.map((d) => d.s));
+  assert.ok(world.traffic.cars.every((c) => c.s > front + 20));
+});
+
+test("cruising in the left lane next to a free one is counted", () => {
+  const left = { forward: () => [0.5, 1] };
+  const right = { forward: () => [0.5, -1] };
+  const [stayLeft, keepRight] = runEpisode([left, right], { seed: 2, seconds: 30, traffic: false });
+  assert.ok(stayLeft.lingered > 20, `left ${stayLeft.lingered}`);
+  assert.ok(keepRight.lingered < 1, `right ${keepRight.lingered}`);
+});
