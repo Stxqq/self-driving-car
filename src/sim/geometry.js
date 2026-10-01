@@ -44,9 +44,18 @@ export function rayPolygonHit(ox, oy, ex, ey, poly) {
 
 /** Closest hit of a ray against points [from, to) of an open polyline. */
 export function rayPolylineHit(ox, oy, ex, ey, line, from, to) {
+  const minX = Math.min(ox, ex);
+  const maxX = Math.max(ox, ex);
+  const minY = Math.min(oy, ey);
+  const maxY = Math.max(oy, ey);
   let best = -1;
   for (let i = from; i < to - 1; i++) {
     const k = 2 * i;
+    // most of the window is nowhere near the ray; a box test is much cheaper
+    if (
+      (line[k] < minX && line[k + 2] < minX) || (line[k] > maxX && line[k + 2] > maxX) ||
+      (line[k + 1] < minY && line[k + 3] < minY) || (line[k + 1] > maxY && line[k + 3] > maxY)
+    ) continue;
     const t = segmentHit(ox, oy, ex, ey, line[k], line[k + 1], line[k + 2], line[k + 3]);
     if (t >= 0 && (best < 0 || t < best)) best = t;
   }
