@@ -1,227 +1,258 @@
 {
   "brain": "src/brains/pretrained.json",
   "layers": [
-    32,
-    20,
-    10,
+    19,
+    12,
+    8,
     2
   ],
   "limits": {
     "seconds": 300,
-    "meters": 6000
+    "meters": 10000
   },
-  "meanMeters": 4048,
-  "medianMeters": 4658,
-  "survived": 20,
+  "meanMeters": 6854,
+  "medianMeters": 7055,
+  "survived": 27,
+  "laneChangesPerKm": 4.16,
   "runs": [
     {
       "seed": 9001,
-      "meters": 4716,
+      "meters": 7332,
       "seconds": 300,
-      "kmh": 56.6,
+      "kmh": 88,
+      "laneChanges": 34,
       "ended": "time"
     },
     {
       "seed": 9002,
-      "meters": 1792,
-      "seconds": 119.8,
-      "kmh": 53.8,
-      "ended": "crashed"
+      "meters": 6790,
+      "seconds": 300,
+      "kmh": 81.5,
+      "laneChanges": 28,
+      "ended": "time"
     },
     {
       "seed": 9003,
-      "meters": 4659,
+      "meters": 7056,
       "seconds": 300,
-      "kmh": 55.9,
+      "kmh": 84.7,
+      "laneChanges": 31,
       "ended": "time"
     },
     {
       "seed": 9004,
-      "meters": 4723,
+      "meters": 6478,
       "seconds": 300,
-      "kmh": 56.7,
+      "kmh": 77.7,
+      "laneChanges": 27,
       "ended": "time"
     },
     {
       "seed": 9005,
-      "meters": 4739,
+      "meters": 7007,
       "seconds": 300,
-      "kmh": 56.9,
+      "kmh": 84.1,
+      "laneChanges": 32,
       "ended": "time"
     },
     {
       "seed": 9006,
-      "meters": 4657,
+      "meters": 7229,
       "seconds": 300,
-      "kmh": 55.9,
+      "kmh": 86.8,
+      "laneChanges": 29,
       "ended": "time"
     },
     {
       "seed": 9007,
-      "meters": 3376,
-      "seconds": 212.8,
-      "kmh": 57.1,
-      "ended": "crashed"
+      "meters": 7365,
+      "seconds": 300,
+      "kmh": 88.4,
+      "laneChanges": 29,
+      "ended": "time"
     },
     {
       "seed": 9008,
-      "meters": 4657,
+      "meters": 6847,
       "seconds": 300,
-      "kmh": 55.9,
+      "kmh": 82.2,
+      "laneChanges": 26,
       "ended": "time"
     },
     {
       "seed": 9009,
-      "meters": 2064,
-      "seconds": 133.3,
-      "kmh": 55.7,
-      "ended": "crashed"
+      "meters": 7054,
+      "seconds": 300,
+      "kmh": 84.6,
+      "laneChanges": 35,
+      "ended": "time"
     },
     {
       "seed": 9010,
-      "meters": 4753,
+      "meters": 6910,
       "seconds": 300,
-      "kmh": 57,
+      "kmh": 82.9,
+      "laneChanges": 31,
       "ended": "time"
     },
     {
       "seed": 9011,
-      "meters": 4793,
-      "seconds": 300,
-      "kmh": 57.5,
-      "ended": "time"
+      "meters": 605,
+      "seconds": 23.3,
+      "kmh": 93.2,
+      "laneChanges": 3,
+      "ended": "crashed"
     },
     {
       "seed": 9012,
-      "meters": 4857,
+      "meters": 7537,
       "seconds": 300,
-      "kmh": 58.3,
+      "kmh": 90.4,
+      "laneChanges": 25,
       "ended": "time"
     },
     {
       "seed": 9013,
-      "meters": 4470,
+      "meters": 7569,
       "seconds": 300,
-      "kmh": 53.6,
+      "kmh": 90.8,
+      "laneChanges": 31,
       "ended": "time"
     },
     {
       "seed": 9014,
-      "meters": 3907,
-      "seconds": 247,
-      "kmh": 56.9,
+      "meters": 6660,
+      "seconds": 289.4,
+      "kmh": 82.9,
+      "laneChanges": 32,
       "ended": "crashed"
     },
     {
       "seed": 9015,
-      "meters": 3770,
-      "seconds": 244.8,
-      "kmh": 55.4,
-      "ended": "crashed"
+      "meters": 7008,
+      "seconds": 300,
+      "kmh": 84.1,
+      "laneChanges": 25,
+      "ended": "time"
     },
     {
       "seed": 9016,
-      "meters": 4770,
+      "meters": 7070,
       "seconds": 300,
-      "kmh": 57.2,
+      "kmh": 84.8,
+      "laneChanges": 29,
       "ended": "time"
     },
     {
       "seed": 9017,
-      "meters": 3785,
-      "seconds": 239.2,
-      "kmh": 57,
-      "ended": "crashed"
+      "meters": 6790,
+      "seconds": 300,
+      "kmh": 81.5,
+      "laneChanges": 32,
+      "ended": "time"
     },
     {
       "seed": 9018,
-      "meters": 1390,
-      "seconds": 93,
-      "kmh": 53.8,
-      "ended": "crashed"
+      "meters": 7188,
+      "seconds": 300,
+      "kmh": 86.3,
+      "laneChanges": 27,
+      "ended": "time"
     },
     {
       "seed": 9019,
-      "meters": 1905,
-      "seconds": 122.3,
-      "kmh": 56.1,
-      "ended": "crashed"
+      "meters": 7377,
+      "seconds": 300,
+      "kmh": 88.5,
+      "laneChanges": 30,
+      "ended": "time"
     },
     {
       "seed": 9020,
-      "meters": 4663,
+      "meters": 7176,
       "seconds": 300,
-      "kmh": 56,
+      "kmh": 86.1,
+      "laneChanges": 29,
       "ended": "time"
     },
     {
       "seed": 9021,
-      "meters": 1731,
-      "seconds": 112.6,
-      "kmh": 55.4,
-      "ended": "crashed"
+      "meters": 7171,
+      "seconds": 300,
+      "kmh": 86.1,
+      "laneChanges": 29,
+      "ended": "time"
     },
     {
       "seed": 9022,
-      "meters": 4754,
+      "meters": 7659,
       "seconds": 300,
-      "kmh": 57,
+      "kmh": 91.9,
+      "laneChanges": 27,
       "ended": "time"
     },
     {
       "seed": 9023,
-      "meters": 3643,
-      "seconds": 231.7,
-      "kmh": 56.6,
-      "ended": "crashed"
-    },
-    {
-      "seed": 9024,
-      "meters": 4497,
+      "meters": 7058,
       "seconds": 300,
-      "kmh": 54,
+      "kmh": 84.7,
+      "laneChanges": 29,
       "ended": "time"
     },
     {
+      "seed": 9024,
+      "meters": 6368,
+      "seconds": 289.5,
+      "kmh": 79.2,
+      "laneChanges": 28,
+      "ended": "crashed"
+    },
+    {
       "seed": 9025,
-      "meters": 4802,
+      "meters": 6928,
       "seconds": 300,
-      "kmh": 57.6,
+      "kmh": 83.1,
+      "laneChanges": 24,
       "ended": "time"
     },
     {
       "seed": 9026,
-      "meters": 4813,
+      "meters": 6956,
       "seconds": 300,
-      "kmh": 57.8,
+      "kmh": 83.5,
+      "laneChanges": 30,
       "ended": "time"
     },
     {
       "seed": 9027,
-      "meters": 4669,
+      "meters": 7030,
       "seconds": 300,
-      "kmh": 56,
+      "kmh": 84.4,
+      "laneChanges": 28,
       "ended": "time"
     },
     {
       "seed": 9028,
-      "meters": 4800,
+      "meters": 6958,
       "seconds": 300,
-      "kmh": 57.6,
+      "kmh": 83.5,
+      "laneChanges": 32,
       "ended": "time"
     },
     {
       "seed": 9029,
-      "meters": 4559,
+      "meters": 7349,
       "seconds": 300,
-      "kmh": 54.7,
+      "kmh": 88.2,
+      "laneChanges": 32,
       "ended": "time"
     },
     {
       "seed": 9030,
-      "meters": 4740,
+      "meters": 7094,
       "seconds": 300,
-      "kmh": 56.9,
+      "kmh": 85.1,
+      "laneChanges": 31,
       "ended": "time"
     }
   ]

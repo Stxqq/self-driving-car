@@ -8,12 +8,12 @@ const load = async (path) => JSON.parse(await readFile(new URL(path, import.meta
 const results = await load("../scripts/results.json");
 const brain = Brain.fromJSON(await load("../src/brains/pretrained.json"));
 
-test("pretrained brain fits the current sensor layout", () => {
+test("pretrained brain fits the current input layout", () => {
   assert.deepEqual(brain.layers, DEFAULT_LAYERS);
 });
 
-test("pretrained brain covers 2 km on average on held-out seeds", () => {
-  assert.ok(results.meanMeters >= 2000, `mean ${results.meanMeters} m`);
+test("pretrained brain covers 4 km on average on held-out seeds", () => {
+  assert.ok(results.meanMeters >= 4000, `mean ${results.meanMeters} m`);
 });
 
 // The README and the page quote results.json; this keeps them honest. Any
@@ -32,12 +32,12 @@ for (const run of results.runs) {
   });
 }
 
-test("held-out episodes are deterministic and still average 2 km", () => {
+test("held-out episodes are deterministic and still average 4 km", () => {
   const opts = { seconds: results.limits.seconds, maxDistance: results.limits.meters };
   const seeds = results.runs.slice(0, 10).map((r) => r.seed);
   const first = seeds.map((seed) => runEpisode([brain], { ...opts, seed })[0].distance);
   const again = seeds.map((seed) => runEpisode([brain], { ...opts, seed })[0].distance);
   assert.deepEqual(again, first);
   const mean = first.reduce((a, b) => a + b, 0) / first.length;
-  assert.ok(mean >= 2000, `mean ${Math.round(mean)} m`);
+  assert.ok(mean >= 4000, `mean ${Math.round(mean)} m`);
 });
