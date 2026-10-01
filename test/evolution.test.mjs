@@ -54,5 +54,5 @@ test("mutation anneals toward its floor", () => {
 test("fitness is distance minus penalties", () => {
   assert.equal(fitness({ distance: 500, crashed: false, stalled: false }), 500);
   assert.ok(fitness({ distance: 500, crashed: true, stalled: false }) < 500);
-  assert.ok(fitness({ distance: 500, crashed: false, stalled: true }) < fitness({ distance: 500, crashed: true, stalled: false }));
+  assert.ok(fitness({ distance: 500, crashed: false, stalled: true }) <= fitness({ distance: 500, crashed: true, stalled: false }));
 });

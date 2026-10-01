@@ -1,8 +1,8 @@
 import { Brain } from "./brain.js";
 import { Rng, deriveSeed } from "./rng.js";
 
-const CRASH_PENALTY = 40;
-const STALL_PENALTY = 80;
+const CRASH_PENALTY = 300;
+const STALL_PENALTY = 300;
 
 /** Meters of road covered, minus a flat penalty for how the run ended. */
 export function fitness(outcome) {
