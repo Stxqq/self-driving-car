@@ -3,21 +3,22 @@
 // of the field is re-checked on fixed validation seeds and the best of
 // those is written to disk.
 //
-//   node scripts/train.mjs                       # from scratch
+//   node scripts/train.mjs                       # from scratch, into runs/brain.json
 //   node scripts/train.mjs --resume --density 0.5
+//   node scripts/train.mjs --resume --out src/brains/pretrained.json
 //
 // --density scales the traffic (validation uses the same density), so a
 // driver can learn speed on an empty road first and traffic after; see
 // scripts/curriculum.sh for the schedule the shipped brain came from.
 
 import { availableParallelism } from "node:os";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { Worker } from "node:worker_threads";
 import { Brain } from "../src/sim/brain.js";
-import { Evolution, fitness } from "../src/sim/evolution.js";
+import { Evolution, FINE_TUNE, fitness } from "../src/sim/evolution.js";
 import { DEFAULT_LAYERS } from "../src/sim/world.js";
 
 const { values: args } = parseArgs({
@@ -30,7 +31,7 @@ const { values: args } = parseArgs({
     workers: { type: "string", default: String(Math.max(1, availableParallelism() - 1)) },
     seed: { type: "string", default: "1" },
     resume: { type: "boolean", default: false },
-    out: { type: "string", default: "src/brains/pretrained.json" },
+    out: { type: "string", default: "runs/brain.json" },
   },
 });
 
@@ -113,7 +114,8 @@ const pad = (v, n) => String(v).padStart(n);
 async function loadAncestor() {
   try {
     return Brain.fromJSON(JSON.parse(await readFile(outPath, "utf8")));
-  } catch {
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
     console.error(`no brain at ${args.out}, starting from scratch`);
     return null;
   }
@@ -125,8 +127,7 @@ const evolution = new Evolution({
   size: Number(args.population),
   seed: Number(args.seed),
   ancestor,
-  // a resumed run starts from a good driver; don't shake it too hard
-  ...(ancestor && { mutationRate: [0.05, 0.02], mutationScale: [0.15, 0.05] }),
+  ...(ancestor && FINE_TUNE),
 });
 const pool = new EpisodePool(Number(args.workers));
 
@@ -163,12 +164,13 @@ for (let g = 0; g < GENERATIONS; g++) {
 
   if ((g + 1) % VALIDATE_EVERY === 0 || g === GENERATIONS - 1) {
     const top = ranked.slice(0, VALIDATE_TOP).map((r) => r.brain);
-    const results = await pool.drive(top, VALIDATION_SEEDS, SECONDS, DENSITY);
-    const valid = results.map((runs) => mean(runs.map((o) => o.distance)));
-    const i = valid.indexOf(Math.max(...valid));
-    if (valid[i] > record) {
-      record = valid[i];
+    const validation = await pool.drive(top, VALIDATION_SEEDS, SECONDS, DENSITY);
+    const validationMeters = validation.map((runs) => mean(runs.map((o) => o.distance)));
+    const i = validationMeters.indexOf(Math.max(...validationMeters));
+    if (validationMeters[i] > record) {
+      record = validationMeters[i];
       const saved = { ...top[i].toJSON(), generation: summary.generation, validation: Math.round(record) };
+      await mkdir(dirname(outPath), { recursive: true });
       await writeFile(outPath, JSON.stringify(saved) + "\n");
       console.log(`      validation ${record.toFixed(0)} m, saved ${args.out}`);
     }
