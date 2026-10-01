@@ -17,7 +17,7 @@ function niceCeil(x) {
   return 10 * base;
 }
 
-const km = (m) => (m / 1000).toFixed(m >= 10000 ? 0 : 1);
+const axisKm = (m) => (m / 1000).toFixed(m >= 10000 ? 0 : 1);
 
 /**
  * series: [{ values, stroke, width, dots }] in meters, one value per x step.
@@ -30,8 +30,11 @@ export function drawChart(svg, { series, reference = null, empty = "" }) {
   svg.replaceChildren();
 
   const count = Math.max(0, ...series.map((s) => s.values.length));
-  if (count === 0) {
-    el("text", { x: width / 2, y: height / 2, class: "chart-empty", "text-anchor": "middle" }, svg).textContent = empty;
+  const note = (y) => {
+    el("text", { x: width / 2, y, class: "chart-empty", "text-anchor": "middle" }, svg).textContent = empty;
+  };
+  if (count === 0 && !reference) {
+    note(height / 2);
     return;
   }
 
@@ -45,10 +48,12 @@ export function drawChart(svg, { series, reference = null, empty = "" }) {
 
   for (const v of [0, ceiling / 2, ceiling]) {
     el("line", { x1: left, x2: width - right, y1: y(v), y2: y(v), class: "chart-grid" }, svg);
-    el("text", { x: left - 6, y: y(v) + 3, class: "chart-tick", "text-anchor": "end" }, svg).textContent = km(v);
+    el("text", { x: left - 6, y: y(v) + 3, class: "chart-tick", "text-anchor": "end" }, svg).textContent = axisKm(v);
   }
-  el("text", { x: width - right, y: height - 3, class: "chart-tick", "text-anchor": "end" }, svg).textContent = String(count);
-  el("text", { x: left, y: height - 3, class: "chart-tick" }, svg).textContent = "1";
+  if (count > 0) {
+    el("text", { x: width - right, y: height - 3, class: "chart-tick", "text-anchor": "end" }, svg).textContent = String(count);
+    el("text", { x: left, y: height - 3, class: "chart-tick" }, svg).textContent = "1";
+  }
 
   if (reference) {
     el("line", { x1: left, x2: width - right, y1: y(reference.value), y2: y(reference.value), class: "chart-ref" }, svg);
@@ -73,4 +78,6 @@ export function drawChart(svg, { series, reference = null, empty = "" }) {
     const label = el("text", { x: width - right, y: ly, class: "chart-tick chart-label", "text-anchor": "end" }, svg);
     label.textContent = reference.label;
   }
+  // nothing yet but the reference: the note goes between the lower grid lines
+  if (count === 0) note(y(ceiling / 4) + 4);
 }
