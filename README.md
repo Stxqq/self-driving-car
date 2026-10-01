@@ -214,6 +214,17 @@ traffic and 22 s on the current one. It signals and moves back after most
 overtakes; the rest of the time it holds the left lane through a gap it
 judges too short to be worth two lane changes.
 
+Train mode in the page evolves 60 cars from random weights on one road
+per generation, traffic fading in over the first fifteen. A round starts
+at 45 s and grows by half each time a car is still driving when it ends,
+up to five minutes, so early generations are quick and the chart isn't
+capped by the clock. Cars that crash stay on the road in red for a moment;
+the legend counts survivors and crashes for the last round. With six
+elites and mutation that anneals over about a dozen generations, the best
+car typically reaches 6 km within ten generations and the number of cars
+still driving at the end of a five-minute round climbs from a handful to
+around half the field by generation twenty.
+
 <p align="center">
   <img src=".github/assets/train.png" width="880" alt="Train mode: an in-browser run a few minutes in, with the best and mean distance per generation">
 </p>
