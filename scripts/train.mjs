@@ -38,8 +38,7 @@ const GENERATIONS = Number(args.generations);
 const SEEDS_PER_GEN = Number(args.seeds);
 const SECONDS = Number(args.seconds);
 const DENSITY = Number(args.density);
-const VALIDATION_SEEDS = [5001, 5002, 5003, 5004];
-const VALIDATION_SECONDS = 120;
+const VALIDATION_SEEDS = [5001, 5002, 5003, 5004, 5005, 5006, 5007, 5008];
 const VALIDATE_EVERY = 5;
 const VALIDATE_TOP = 6;
 const outPath = resolve(fileURLToPath(new URL("..", import.meta.url)), args.out);
@@ -133,7 +132,7 @@ const pool = new EpisodePool(Number(args.workers));
 
 let record = -Infinity;
 if (ancestor) {
-  const [scores] = await pool.drive([ancestor], VALIDATION_SEEDS, VALIDATION_SECONDS, DENSITY);
+  const [scores] = await pool.drive([ancestor], VALIDATION_SEEDS, SECONDS, DENSITY);
   record = mean(scores.map((o) => o.distance));
   console.log(`resuming from ${args.out}: ${record.toFixed(0)} m on validation`);
 }
@@ -164,7 +163,7 @@ for (let g = 0; g < GENERATIONS; g++) {
 
   if ((g + 1) % VALIDATE_EVERY === 0 || g === GENERATIONS - 1) {
     const top = ranked.slice(0, VALIDATE_TOP).map((r) => r.brain);
-    const results = await pool.drive(top, VALIDATION_SEEDS, VALIDATION_SECONDS, DENSITY);
+    const results = await pool.drive(top, VALIDATION_SEEDS, SECONDS, DENSITY);
     const valid = results.map((runs) => mean(runs.map((o) => o.distance)));
     const i = valid.indexOf(Math.max(...valid));
     if (valid[i] > record) {
