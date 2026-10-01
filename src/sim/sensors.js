@@ -25,6 +25,7 @@ export class RayFan {
   constructor({ count = 11, spread = Math.PI * 0.9, range = 70, mirrors = [], mirrorRange = 40 } = {}) {
     this.angles = [...fanAngles(count, spread), ...mirrors];
     this.ranges = this.angles.map((_, i) => (i < count ? range : mirrorRange));
+    this.maxRange = Math.max(...this.ranges);
     this.readings = new Float64Array(this.angles.length);
     // ray origin and endpoints in world space, kept for drawing
     this.origin = new Float64Array(2);
@@ -41,7 +42,7 @@ export class RayFan {
    * `s` and against traffic cars whose arc length is within range.
    */
   sense(car, road, s, traffic) {
-    const range = Math.max(...this.ranges);
+    const range = this.maxRange;
     const ox = car.x;
     const oy = car.y;
     this.origin[0] = ox;

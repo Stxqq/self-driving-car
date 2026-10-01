@@ -21,8 +21,8 @@ export const DEFAULT_LAYERS = Object.freeze([INPUT_SIZE, 18, 10, 2]);
 const START_S = 12;
 
 const RULES = {
-  // the sweeper: a line moving up the road at walking-plus pace; anyone
-  // behind it is out. Because it depends only on time, traffic can be
+  // the sweeper: a line moving up the road at 18 km/h; anyone behind it
+  // is out. Because it depends only on time, traffic can be
   // spawned and cleaned up without ever looking at the learning cars.
   sweepGrace: 8,
   sweepPace: 5,
@@ -42,7 +42,7 @@ export class Driver {
     this.stalled = false;
     this.s = START_S;
     this.d = 0;
-    this.roadIndex = Math.floor(START_S / 2);
+    this.roadIndex = 0;
     this.best = START_S;
     this.lastGain = 0;
     this.time = 0;
@@ -73,6 +73,7 @@ export class World {
     this.drivers = brains.map((brain, i) => {
       const driver = new Driver(brain, new Car(start.x, start.y, start.heading), i);
       driver.d = this.road.laneOffset(Math.floor(lanes / 2));
+      driver.roadIndex = Math.floor(START_S / this.road.spacing);
       return driver;
     });
     this.alive = this.drivers.length;
