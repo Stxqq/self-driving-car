@@ -16,6 +16,12 @@ const TRAFFIC = [
   ["#FED7AA", "rgba(124,45,18,.2)"],
 ];
 const FOLLOW = 0.085;
+
+/**
+ * The share of the remaining distance to close this frame, so that
+ * cur += (target - cur) * rate looks the same at 30, 60 or 144 Hz.
+ */
+export const easeFactor = (rate, dt) => 1 - (1 - rate) ** (dt * 60);
 const DOT_SPACING = 3;
 const MARKER_EVERY = 100;
 const CAR_LENGTH = CAR_SPEC.length;
@@ -32,7 +38,7 @@ export class Stage {
     this.height = 1;
     this.dpr = 1;
     this.ppm = 7;
-    this.anchorY = 0.7;
+    this.anchorY = 0.64;
     this.reducedMotion = false;
   }
 
@@ -64,8 +70,7 @@ export class Stage {
       Object.assign(cam, { x, y, angle, ready: true });
       return;
     }
-    // frame-rate independent form of cur += (target - cur) * 0.085 at 60 Hz
-    const k = 1 - (1 - FOLLOW) ** (dt * 60);
+    const k = easeFactor(FOLLOW, dt);
     cam.x += (x - cam.x) * k;
     cam.y += (y - cam.y) * k;
     const turn = Math.atan2(Math.sin(angle - cam.angle), Math.cos(angle - cam.angle));
@@ -101,10 +106,16 @@ export class Stage {
     const reach = Math.hypot(this.width, this.height) / this.ppm;
     this.drawDots(reach);
     this.drawRoad(world.road, s - reach, s + reach);
+    // the road starts at s = 0, heading north from the origin; let it come
+    // out of the tile instead of stopping dead behind the first car
+    const atStart = s - reach < 0;
+    if (atStart) this.fadeToTile(world.road, reach, 22, 0, 0);
     this.drawSweep(world);
     if (world.traffic) this.drawTraffic(world.traffic.within(s - reach, s + reach));
     if (ghosts) this.drawGhosts(world.drivers, focus);
     if (focus) this.drawFocus(focus);
+    // and the rear ray that runs on past it
+    if (atStart) this.fadeToTile(world.road, reach, 0, -10, -reach);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawMarkers(world.road, s - reach, s + reach);
@@ -115,7 +126,7 @@ export class Stage {
   }
 
   // a dot grid fixed to the ground, so speed reads even on a straight
-  drawDots(reach) {
+  drawDots(reach, fill = "rgba(17,17,19,.11)") {
     const { ctx, camera: cam } = this;
     const half = reach / 2 + DOT_SPACING;
     const r = this.px(0.6);
@@ -125,8 +136,29 @@ export class Stage {
     for (let x = x0; x < cam.x + half; x += DOT_SPACING) {
       for (let y = y0; y < cam.y + half; y += DOT_SPACING) ctx.rect(x - r, y - r, 2 * r, 2 * r);
     }
-    ctx.fillStyle = "rgba(17,17,19,.11)";
+    ctx.fillStyle = fill;
     ctx.fill();
+  }
+
+  // Washes the road strip between `clear` and `solid` (world y) into the
+  // tile, and on to `far`; the ground dots come back in as it fades.
+  fadeToTile(road, reach, clear, solid, far) {
+    const ctx = this.ctx;
+    const w = road.halfWidth + 2;
+    const band = (from, to) => {
+      const g = ctx.createLinearGradient(0, clear, 0, solid);
+      g.addColorStop(0, from);
+      g.addColorStop(1, to);
+      return g;
+    };
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-w, Math.min(clear, far), 2 * w, Math.abs(far - clear));
+    ctx.clip();
+    ctx.fillStyle = band("rgba(245,245,246,0)", TILE);
+    ctx.fill();
+    this.drawDots(reach, band("rgba(17,17,19,0)", "rgba(17,17,19,.11)"));
+    ctx.restore();
   }
 
   drawRoad(road, s0, s1) {
