@@ -14,6 +14,15 @@ A small neural network that taught itself, by evolution, to drive a curvy three-
   <img src="https://img.shields.io/badge/dependencies-0-f59e0b?style=flat&labelColor=111113" alt="no dependencies">
 </p>
 
+<p align="center">
+  <a href="https://stxqq.github.io/self-driving-car/">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/launch-dark.png">
+      <img src=".github/assets/launch-light.png" alt="Open the live demo" width="300">
+    </picture>
+  </a>
+</p>
+
 Nobody shows the network how to drive. Each generation, a population of
 networks takes to the same stretch of road; the ones that get furthest
 become the parents of the next. The page lets you watch the trained driver,
