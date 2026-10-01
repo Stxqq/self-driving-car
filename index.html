@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>self-driving-car</title>
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <style>
+    :root { --ink: #111113; --gray: #9a9aa2; --tile: #f5f5f6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); font: 16.5px/1.6 "InterVariable", "Inter", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    main { max-width: 560px; margin: 0 auto; padding: 72px 16px; }
+    h1 { font-size: 16.5px; font-weight: 600; margin: 0; }
+    p { color: var(--gray); margin: 4px 0 28px; }
+    canvas { display: block; width: 100%; height: 640px; border-radius: 22px; background: #101013; }
+    .readout { display: flex; gap: 28px; margin-top: 14px; font-variant-numeric: tabular-nums; }
+    .readout b { font-size: 24px; font-weight: 800; }
+    .readout span { color: var(--gray); font-size: 14px; margin-left: 3px; }
+    .readout small { display: block; font: 700 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gray); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Simulation</h1>
+    <p>The pretrained driver in white, forty mutated copies of it as ghosts. A new road every time they are all out.</p>
+    <canvas id="stage"></canvas>
+    <div class="readout">
+      <div><small>Distance</small><b id="distance">0</b><span>m</span></div>
+      <div><small>Speed</small><b id="speed">0</b><span>km/h</span></div>
+      <div><small>Alive</small><b id="alive">0</b><span id="seed"></span></div>
+    </div>
+  </main>
+  <script type="module">
+    import { Brain } from "./src/sim/brain.js";
+    import { Rng } from "./src/sim/rng.js";
+    import { World, DT, DEFAULT_LAYERS } from "./src/sim/world.js";
+    import { Renderer } from "./src/view/renderer.js";
+
+    const canvas = document.getElementById("stage");
+    const renderer = new Renderer(canvas);
+    const ui = Object.fromEntries(["distance", "speed", "alive", "seed"].map((id) => [id, document.getElementById(id)]));
+
+    const rng = new Rng(Date.now() >>> 0);
+    const pretrained = await fetch("./src/brains/pretrained.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => json && Brain.fromJSON(json));
+
+    function population() {
+      if (!pretrained) return Array.from({ length: 40 }, () => Brain.random(DEFAULT_LAYERS, rng));
+      return [pretrained, ...Array.from({ length: 40 }, () => pretrained.mutated(rng, 0.1, 0.3))];
+    }
+
+    let world;
+    function restart() {
+      world = new World({ seed: rng.uint(), brains: population() });
+      renderer.camera.ready = false;
+      ui.seed.textContent = ` seed ${world.seed}`;
+    }
+
+    let last = performance.now();
+    let pending = 0;
+    function frame(now) {
+      // clamped so a background tab doesn't fast-forward a minute of driving
+      pending = Math.min(pending + (now - last) / 1000, 0.25);
+      last = now;
+      while (pending >= DT) {
+        world.step();
+        pending -= DT;
+      }
+      if (world.alive === 0 && world.time > 1) restart();
+      const focus = world.drivers[0].alive ? world.drivers[0] : world.leader();
+      renderer.draw(world, focus);
+      ui.distance.textContent = Math.round(focus.distance);
+      ui.speed.textContent = Math.round(focus.car.speed * 3.6);
+      ui.alive.textContent = world.alive;
+      requestAnimationFrame(frame);
+    }
+
+    const fit = () => renderer.resize();
+    addEventListener("resize", fit);
+    fit();
+    restart();
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
