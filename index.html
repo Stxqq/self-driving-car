@@ -3,85 +3,221 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>self-driving-car</title>
+  <title>Self-driving car</title>
+  <meta name="description" content="A small neural network that learned to drive a curvy highway through traffic by evolution. Watch it, train your own in the browser, or take the wheel.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://stxqq.github.io/self-driving-car/">
+  <meta property="og:title" content="Self-driving car">
+  <meta property="og:description" content="A small neural network that learned to drive a curvy highway through traffic by evolution. Watch it, train your own in the browser, or take the wheel.">
+  <meta property="og:image" content="https://stxqq.github.io/self-driving-car/social.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M9 30 13 2M23 30 19 2' stroke='%23111113' stroke-width='2.5' stroke-linecap='round'/%3E%3Crect x='13.5' y='15' width='5' height='9' rx='1.5' fill='%23111113'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://rsms.me/">
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <style>
-    :root { --ink: #111113; --gray: #9a9aa2; --tile: #f5f5f6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: #fff; color: var(--ink); font: 16.5px/1.6 "InterVariable", "Inter", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-    main { max-width: 560px; margin: 0 auto; padding: 72px 16px; }
-    h1 { font-size: 16.5px; font-weight: 600; margin: 0; }
-    p { color: var(--gray); margin: 4px 0 28px; }
-    canvas { display: block; width: 100%; height: 640px; border-radius: 22px; background: #101013; }
-    .readout { display: flex; gap: 28px; margin-top: 14px; font-variant-numeric: tabular-nums; }
-    .readout b { font-size: 24px; font-weight: 800; }
-    .readout span { color: var(--gray); font-size: 14px; margin-left: 3px; }
-    .readout small { display: block; font: 700 9.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--gray); }
-  </style>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="src/ui/app.js"></script>
 </head>
 <body>
+  <nav class="pill" id="pill" aria-label="Mode">
+    <span class="pill-ind" aria-hidden="true"></span>
+    <a class="pill-btn" href="#watch" data-mode="watch">Watch</a>
+    <a class="pill-btn" href="#train" data-mode="train">Train</a>
+    <a class="pill-btn" href="#drive" data-mode="drive">Drive</a>
+  </nav>
+
   <main>
-    <h1>Simulation</h1>
-    <p>The pretrained driver in white, forty mutated copies of it as ghosts. A new road every time they are all out.</p>
-    <canvas id="stage"></canvas>
-    <div class="readout">
-      <div><small>Distance</small><b id="distance">0</b><span>m</span></div>
-      <div><small>Speed</small><b id="speed">0</b><span>km/h</span></div>
-      <div><small>Alive</small><b id="alive">0</b><span id="seed"></span></div>
-    </div>
+    <section class="intro rise">
+      <h1 class="dear">Self-driving car</h1>
+      <p class="gray">
+        A small neural network drives a curvy highway through traffic.
+        It learned by evolution, with no examples to copy, only distance
+        covered and a great many crashed cars. Watch it, evolve your own,
+        or take the wheel.
+      </p>
+    </section>
+
+    <section class="bench rise" aria-label="Simulation">
+      <div class="stage" id="stage" data-mode="watch">
+        <div class="view">
+          <canvas class="road" id="road" role="img" aria-label="Top-down view of the highway following the car in focus"></canvas>
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="touch" aria-label="Driving controls">
+            <div class="touch-pair">
+              <button type="button" data-control="left" aria-label="Steer left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button type="button" data-control="right" aria-label="Steer right"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+            </div>
+            <div class="touch-pair">
+              <button type="button" data-control="brake" aria-label="Brake"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+              <button type="button" data-control="gas" aria-label="Accelerate"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud">
+          <div class="hud-col">
+            <div class="card stats">
+              <div class="stat"><small id="first-label">Road</small><p><b id="first">1</b><span id="first-unit"></span></p></div>
+              <div class="stat"><small>Distance</small><p><b id="distance">0.00</b><span>km</span></p></div>
+              <div class="stat"><small>Speed</small><p><b id="speed">0</b><span>km/h</span></p></div>
+              <div class="stat"><small id="last-label">Time</small><p><b id="last">0</b><span id="last-unit">s</span></p></div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="card-head"><b id="chart-title">Held-out roads</b><em id="chart-note"></em></div>
+              <svg class="chart" id="chart" role="img" aria-labelledby="chart-title"></svg>
+              <p class="legend" id="chart-legend"></p>
+            </div>
+          </div>
+
+          <div class="hud-col">
+            <div class="card net-card">
+              <div class="card-head"><b>Network</b><em>32 · 20 · 10 · 2</em></div>
+              <canvas class="net" id="net" role="img" aria-label="The network's weights and live activations"></canvas>
+              <dl class="net-key">
+                <div><dt>00–10</dt><dd>rays ahead</dd></div>
+                <div><dt>28</dt><dd>lane offset</dd></div>
+                <div><dt>11–13</dt><dd>mirrors</dd></div>
+                <div><dt>29</dt><dd>heading</dd></div>
+                <div><dt>14–27</dt><dd>closing rate</dd></div>
+                <div><dt>30–31</dt><dd>speed, turning</dd></div>
+              </dl>
+            </div>
+
+            <div class="card controls">
+              <div class="ctl only-train">
+                <small>Speed</small>
+                <div class="chips" id="speeds" role="group" aria-label="Simulation steps per frame"></div>
+              </div>
+              <div class="ctl only-watch">
+                <small>Road</small>
+                <button type="button" class="chip" id="new-road">New road</button>
+              </div>
+              <div class="ctl only-drive">
+                <small>Keys</small>
+                <p class="keys"><kbd>←</kbd><kbd>→</kbd> steer <kbd>↑</kbd> gas <kbd>↓</kbd> brake <kbd>R</kbd> again</p>
+              </div>
+              <div class="brain">
+                <small>Brain</small>
+                <p class="brain-status" id="brain-status">Pretrained</p>
+                <div class="links not-drive">
+                  <button type="button" data-brain="save">Save</button>
+                  <button type="button" data-brain="load">Load</button>
+                  <button type="button" data-brain="export">Export</button>
+                  <button type="button" data-brain="import">Import</button>
+                  <button type="button" data-brain="reset">Reset</button>
+                </div>
+                <input type="file" id="import-file" accept="application/json,.json" hidden>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="caption">
+        <h2>Highway</h2>
+        <p id="caption-sub">Three lanes</p>
+      </div>
+    </section>
+
+    <section class="feed" aria-label="Anatomy">
+      <figure>
+        <div class="feed-tile feed-anno" id="anatomy" tabindex="0" aria-label="Anatomy of the car. Hover or focus for the spec sheet.">
+          <div class="anno-frame car-frame">
+            <svg class="rays" aria-hidden="true"><g data-rays></g></svg>
+            <svg class="car" viewBox="0 0 64 156" aria-hidden="true">
+              <rect data-wheel x="-2" y="19" width="7" height="22" rx="2.5" fill="#2b2b30"/>
+              <rect data-wheel x="59" y="19" width="7" height="22" rx="2.5" fill="#2b2b30"/>
+              <rect x="-2" y="115" width="7" height="22" rx="2.5" fill="#2b2b30"/>
+              <rect x="59" y="115" width="7" height="22" rx="2.5" fill="#2b2b30"/>
+              <rect width="64" height="156" rx="14" fill="#111113"/>
+              <path d="M10 46 Q32 38 54 46 L50 66 Q32 62 14 66 Z" fill="rgba(255,255,255,.22)"/>
+              <path d="M14 118 Q32 115 50 118 L52 128 Q32 132 12 128 Z" fill="rgba(255,255,255,.16)"/>
+              <rect x="8" y="3" width="11" height="3.5" rx="1.75" fill="rgba(255,255,255,.7)"/>
+              <rect x="45" y="3" width="11" height="3.5" rx="1.75" fill="rgba(255,255,255,.7)"/>
+              <g data-brakes>
+                <rect x="7" y="149.5" width="12" height="3.5" rx="1.75" fill="#dc2626"/>
+                <rect x="45" y="149.5" width="12" height="3.5" rx="1.75" fill="#dc2626"/>
+              </g>
+            </svg>
+
+            <div class="kl" aria-hidden="true">
+              <div class="kl-grid"></div>
+              <div class="kl-box"></div>
+              <div class="kl-corner"><span>R0.4</span></div>
+              <div class="kl-dim kl-dim-top"><i></i><b>1.80</b><i></i></div>
+              <div class="kl-dim kl-dim-side"><i></i><b>4.40</b><i></i></div>
+              <div class="kl-axle" style="top: 19.3%"></div>
+              <div class="kl-axle" style="top: 80.7%"></div>
+            </div>
+
+            <div class="anno-item ai-left" style="top: 50%">
+              <div class="anno-label"><em>01</em><b>Sensors</b><span>14 rays, 70 m ahead, 40 m back</span></div>
+              <i class="anno-line"></i><i class="anno-dot"></i>
+            </div>
+            <div class="anno-item ai-right" style="top: 36%">
+              <i class="anno-dot"></i><i class="anno-line"></i>
+              <div class="anno-label"><em>02</em><b>Network</b><span>32 inputs, 892 weights</span></div>
+            </div>
+            <div class="anno-item ai-left" style="top: 19.3%">
+              <div class="anno-label"><em>03</em><b>Controls</b><span>Pedal and steer</span></div>
+              <i class="anno-line"></i><i class="anno-dot"></i>
+            </div>
+            <div class="anno-item ai-right" style="top: 92%">
+              <i class="anno-dot"></i><i class="anno-line"></i>
+              <div class="anno-label"><em>04</em><b>Fitness</b><span>Meters gained, minus 300 for going out</span></div>
+            </div>
+          </div>
+          <div class="anno-hint">Hover for details</div>
+        </div>
+        <figcaption class="feed-caption">
+          <h2>Anatomy</h2>
+          <p>Live from the car in focus · rays on a square-root scale</p>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section class="column" aria-label="How it learns">
+      <h2 class="dear">How it learns</h2>
+      <p class="gray">
+        Nobody shows the network how to drive. A population of random
+        networks takes to the road, and the ones that get furthest become
+        the parents of the next generation.
+      </p>
+      <ol class="rows steps">
+        <li><em>01</em><span>Sixty cars with random weights start on the same road.</span></li>
+        <li><em>02</em><span>Each drives until it crashes, falls behind a line moving at 18 km/h, or a minute is up.</span></li>
+        <li><em>03</em><span>Its score is the distance covered, minus 300 m for going out early.</span></li>
+        <li><em>04</em><span>The best four carry over. The rest are children of tournament winners, crossed and mutated.</span></li>
+      </ol>
+
+      <h2 class="dear section-gap">The trained driver</h2>
+      <p class="gray">
+        The brain in Watch came out of a longer curriculum, run headless in
+        Node: an empty road first, then traffic, then five-minute episodes.
+        These are its numbers on five roads it never saw.
+      </p>
+      <div class="rows facts">
+        <div class="row"><span>Mean distance</span><b data-fact="mean">–</b></div>
+        <div class="row"><span>Lasted the full five minutes</span><b data-fact="finished">–</b></div>
+        <div class="row"><span>Average speed</span><b data-fact="speed">–</b></div>
+        <div class="row"><span>Weights</span><b data-fact="weights">–</b></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="f-block">
+        <div class="f-label">Source</div>
+        <a class="f-value" href="https://github.com/Stxqq/self-driving-car">github.com/Stxqq/self-driving-car</a>
+      </div>
+      <div class="f-block">
+        <div class="f-label">License</div>
+        <a class="f-value" href="https://github.com/Stxqq/self-driving-car/blob/main/LICENSE">MIT</a>
+      </div>
+      <div class="f-block">
+        <div class="f-label">Built by</div>
+        <a class="f-value" href="https://github.com/Stxqq">Stefan Carapic</a>
+      </div>
+    </footer>
   </main>
-  <script type="module">
-    import { Brain } from "./src/sim/brain.js";
-    import { Rng } from "./src/sim/rng.js";
-    import { World, DT, DEFAULT_LAYERS } from "./src/sim/world.js";
-    import { Renderer } from "./src/view/renderer.js";
-
-    const canvas = document.getElementById("stage");
-    const renderer = new Renderer(canvas);
-    const ui = Object.fromEntries(["distance", "speed", "alive", "seed"].map((id) => [id, document.getElementById(id)]));
-
-    const rng = new Rng(Date.now() >>> 0);
-    const pretrained = await fetch("./src/brains/pretrained.json")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => json && Brain.fromJSON(json));
-
-    function population() {
-      if (!pretrained) return Array.from({ length: 40 }, () => Brain.random(DEFAULT_LAYERS, rng));
-      return [pretrained, ...Array.from({ length: 40 }, () => pretrained.mutated(rng, 0.1, 0.3))];
-    }
-
-    let world;
-    function restart() {
-      world = new World({ seed: rng.uint(), brains: population() });
-      renderer.camera.ready = false;
-      ui.seed.textContent = ` seed ${world.seed}`;
-    }
-
-    let last = performance.now();
-    let pending = 0;
-    function frame(now) {
-      // clamped so a background tab doesn't fast-forward a minute of driving
-      pending = Math.min(pending + (now - last) / 1000, 0.25);
-      last = now;
-      while (pending >= DT) {
-        world.step();
-        pending -= DT;
-      }
-      if (world.alive === 0 && world.time > 1) restart();
-      const focus = world.drivers[0].alive ? world.drivers[0] : world.leader();
-      renderer.draw(world, focus);
-      ui.distance.textContent = Math.round(focus.distance);
-      ui.speed.textContent = Math.round(focus.car.speed * 3.6);
-      ui.alive.textContent = world.alive;
-      requestAnimationFrame(frame);
-    }
-
-    const fit = () => renderer.resize();
-    addEventListener("resize", fit);
-    fit();
-    restart();
-    requestAnimationFrame(frame);
-  </script>
 </body>
 </html>
