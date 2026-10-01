@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { Brain } from "../src/sim/brain.js";
 import { CAR_SPEC, Car } from "../src/sim/car.js";
 import { Road } from "../src/sim/road.js";
@@ -56,7 +57,8 @@ test("full lock at walking pace traces a circle of the bicycle radius", () => {
   const car = new Car(0, 0, 0, 3);
   car.control(0, 0, 1);
   for (let i = 0; i < 60; i++) car.step(DT);
-  car.control(car.spec.rollingResistance / car.spec.maxAccel, 0, 1);
+  const { rollingResistance, engineBrake, maxAccel } = car.spec;
+  car.control((rollingResistance + engineBrake) / (maxAccel + engineBrake), 0, 1);
   const xs = [];
   const ys = [];
   for (let i = 0; i < 60 * 20; i++) {
@@ -84,25 +86,51 @@ test("same seed and brains give the same trajectory", () => {
   assert.deepEqual(trace(), trace());
 });
 
-test("traffic does not depend on the learning cars", () => {
-  const empty = new World({ seed: 5, brains: [] });
-  const busy = new World({ seed: 5, brains: randomBrains(30, 2) });
+test("without learning cars, traffic is a pure function of the seed", () => {
+  const a = new World({ seed: 5, brains: [] });
+  const b = new World({ seed: 5, brains: [] });
   for (let i = 0; i < 60 * 40; i++) {
-    empty.step();
-    busy.step();
+    a.step();
+    b.step();
   }
   const state = (w) => w.traffic.cars.map((c) => [c.id, c.s, c.d, c.speed]);
-  assert.ok(empty.traffic.cars.length > 20);
-  assert.deepEqual(state(busy), state(empty));
+  assert.ok(a.traffic.cars.length > 10);
+  assert.deepEqual(state(a), state(b));
 });
 
-test("a brain scores the same alone as in a crowd", () => {
-  const brains = randomBrains(25, 3);
-  const crowd = runEpisode(brains, { seed: 12, seconds: 40 });
-  for (const i of [0, 7, 19]) {
-    const [solo] = runEpisode([brains[i]], { seed: 12, seconds: 40 });
-    assert.deepEqual(solo, crowd[i]);
+test("traffic keeps its distance behind a slow learning car instead of running into it", () => {
+  // 40 km/h in the middle lane, never changing lanes
+  const crawler = { forward: (inputs) => [(11 - inputs[15] * CAR_SPEC.maxSpeed) / 2, 0] };
+  for (const seed of [1, 2, 3, 4]) {
+    const [o] = runEpisode([crawler], { seed, seconds: 120 });
+    assert.ok(!o.crashed, `seed ${seed}: rear-ended at ${Math.round(o.distance)} m`);
   }
+});
+
+test("traffic that comes up behind a slow learning car overtakes it", () => {
+  // the pretrained driver for a minute, passing everyone, then 40 km/h
+  const driver = Brain.fromJSON(JSON.parse(readFileSync(new URL("../src/brains/pretrained.json", import.meta.url))));
+  let steps = 0;
+  const slowdown = {
+    forward(inputs) {
+      if (steps++ < 60 * 60) return driver.forward(inputs);
+      return [(11 - inputs[15] * CAR_SPEC.maxSpeed) / 2, 0];
+    },
+  };
+  const world = new World({ seed: 2, brains: [slowdown], traffic: true });
+  const behind = new Set();
+  const overtook = new Set();
+  for (let i = 0; i < 60 * 150; i++) {
+    world.step();
+    const me = world.drivers[0];
+    if (i < 60 * 70) continue;
+    for (const car of world.traffic.cars) {
+      if (car.s < me.s - 10) behind.add(car.id);
+      else if (car.s > me.s + 10 && behind.has(car.id)) overtook.add(car.id);
+    }
+  }
+  assert.ok(world.drivers[0].alive);
+  assert.ok(overtook.size >= 3, `only ${overtook.size} overtook`);
 });
 
 test("a car that never moves is swept up as stalled", () => {
