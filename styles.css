@@ -296,7 +296,9 @@ kbd {
   filter: drop-shadow(0 16px 18px rgba(0, 0, 0, .2));
   transition: transform .5s var(--ease);
 }
-.car [data-wheel] { transform-box: fill-box; transform-origin: center; }
+.car [data-wheel] { transform-box: fill-box; transform-origin: center; transition: transform .45s var(--ease); }
+/* the spec sheet measures the car at rest: wheels straight while it is open */
+.feed-anno:is(:hover, :focus-within) .car [data-wheel] { transform: none !important; }
 .car [data-brakes] { opacity: 0; transition: opacity .15s var(--ease); }
 
 .anno-item { position: absolute; display: flex; align-items: center; translate: 0 -50%; pointer-events: none; }
