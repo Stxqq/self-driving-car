@@ -4,15 +4,21 @@ import { CAR_SPEC } from "./car.js";
 
 const DEFAULTS = {
   firstSpawn: 70,
-  minSpacing: 16,
-  maxSpacing: 50,
+  minSpacing: 30,
+  maxSpacing: 90,
   // scales how many cars spawn; training starts on emptier roads
   density: 1,
   // desired speeds by lane: the leftmost lane cruises in the top band,
-  // each lane to the right one band lower
-  topSpeed: 24,
-  speedBand: 5,
+  // each lane to the right a step lower. The bands overlap, so every lane
+  // has someone slower than the car behind them sooner or later, and all
+  // of them are slower than a car that can do 115 km/h.
+  topSpeed: 26,
+  speedBand: 8,
+  laneStep: 1.5,
   laneChangeTime: 3.2,
+  // traffic blinks this long before it moves over; it is the only warning
+  // a learning car gets, since traffic never looks for it
+  signalTime: 1.2,
   // intelligent driver model
   comfortAccel: 1.4,
   comfortBrake: 2.2,
@@ -27,6 +33,7 @@ class TrafficCar {
     this.lane = lane;
     this.targetLane = lane;
     this.changeProgress = 1;
+    this.signalLeft = 0;
     this.d = 0;
     this.lateralSpeed = 0;
     this.speed = speed;
@@ -83,7 +90,9 @@ export class Traffic {
       const v = car.speed;
       car.speed = Math.max(0, v + car.accel * dt);
       car.s += (v + car.speed) * 0.5 * dt;
-      if (car.changingLanes) {
+      if (car.signalLeft > 0) {
+        car.signalLeft = Math.max(0, car.signalLeft - dt);
+      } else if (car.changingLanes) {
         car.changeProgress = Math.min(1, car.changeProgress + dt / this.laneChangeTime);
         if (car.changeProgress === 1) car.lane = car.targetLane;
       }
@@ -146,13 +155,13 @@ export class Traffic {
 
   /** Speeds a car spawned in `lane` wants to drive. */
   laneBand(lane) {
-    const top = this.topSpeed - lane * this.speedBand;
+    const top = this.topSpeed - lane * this.laneStep;
     return [top - this.speedBand, top];
   }
 
-  // Overtake on the left when stuck behind someone slower, if quick enough
-  // for that lane; drift back to the right once it is clear. Nobody changes
-  // lanes for no reason, which keeps the fast lane fast.
+  // Overtake on the left when stuck behind someone slower; move back to the
+  // right once past, unless that only means getting stuck again. Nobody
+  // changes lanes for no reason.
   think(car, i) {
     const rng = this.rng;
     car.nextThink = this.time + rng.range(1.5, 5);
@@ -163,12 +172,14 @@ export class Traffic {
     let lane = car.lane;
     if (blocked && car.lane > 0 && car.desiredSpeed > this.laneBand(car.lane - 1)[0] - 1) {
       lane = car.lane - 1;
-    } else if (!blocked && car.lane < this.road.lanes - 1 && car.desiredSpeed <= this.laneBand(car.lane + 1)[1] + 1) {
-      lane = car.lane + 1;
+    } else if (!blocked && car.lane < this.road.lanes - 1) {
+      const next = this.leaderIn(car.lane + 1, i, car.s, 80);
+      if (!next || next.speed >= car.desiredSpeed - 1.5) lane = car.lane + 1;
     }
     if (lane !== car.lane && this.laneIsClear(lane, car)) {
       car.targetLane = lane;
       car.changeProgress = 0;
+      car.signalLeft = this.signalTime;
     }
   }
 
