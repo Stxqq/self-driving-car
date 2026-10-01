@@ -15,18 +15,14 @@ A small neural network that taught itself, by evolution, to drive a curvy three-
 </p>
 
 <p align="center">
-  <a href="https://stxqq.github.io/self-driving-car/">
-    <picture>
+  <a href="https://stxqq.github.io/self-driving-car/"><picture>
       <source media="(prefers-color-scheme: dark)" srcset=".github/assets/launch-dark.png">
-      <img src=".github/assets/launch-light.png" alt="Open the live demo" width="300">
-    </picture>
-  </a>
-  <a href="https://github.com/Stxqq/self-driving-car">
-    <picture>
+      <img src=".github/assets/launch-light.png" alt="Open the live demo" width="280">
+    </picture></a>
+  <a href="https://github.com/Stxqq/self-driving-car"><picture>
       <source media="(prefers-color-scheme: dark)" srcset=".github/assets/star-dark.png">
-      <img src=".github/assets/star-light.png" alt="Star on GitHub" width="260">
-    </picture>
-  </a>
+      <img src=".github/assets/star-light.png" alt="Star on GitHub" width="280">
+    </picture></a>
   <br>
   <sub>If it made you smile, a star helps more people find it.</sub>
 </p>
