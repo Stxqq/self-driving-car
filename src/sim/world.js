@@ -2,7 +2,7 @@ import { Car, CAR_SPEC } from "./car.js";
 import { Road } from "./road.js";
 import { RayFan } from "./sensors.js";
 import { Traffic } from "./traffic.js";
-import { polygonsOverlap, polygonTouchesPolyline } from "./geometry.js";
+import { polygonsOverlap, polygonTouchesPolyline, wrapAngle } from "./geometry.js";
 
 export const DT = 1 / 60;
 
@@ -14,9 +14,21 @@ export const SENSOR_CONFIG = Object.freeze({
   mirrorRange: 40,
 });
 
-/** Inputs are the ray readings plus speed and current wheel angle. */
-export const INPUT_SIZE = SENSOR_CONFIG.count + SENSOR_CONFIG.mirrors.length + 2;
-export const DEFAULT_LAYERS = Object.freeze([INPUT_SIZE, 18, 10, 2]);
+const RAY_COUNT = SENSOR_CONFIG.count + SENSOR_CONFIG.mirrors.length;
+
+/**
+ * Inputs: each ray's reading and how fast it is closing in (one frame of
+ * distances can't tell a parked car from one doing 100 km/h), then what a
+ * lane-keeping camera would report (offset from the road's center line and
+ * heading relative to it), then speed and how hard the car is turning.
+ */
+export const INPUT_SIZE = RAY_COUNT * 2 + 4;
+export const DEFAULT_LAYERS = Object.freeze([INPUT_SIZE, 20, 10, 2]);
+
+// closing rates are scaled so this many m/s reads as 1
+const CLOSING_SCALE = 30;
+// and heading error so this many radians does
+const HEADING_SCALE = 0.5;
 
 const START_S = 12;
 
@@ -37,6 +49,7 @@ export class Driver {
     this.index = index;
     this.sensors = new RayFan(SENSOR_CONFIG);
     this.inputs = new Float64Array(INPUT_SIZE);
+    this.previous = null;
     this.alive = true;
     this.crashed = false;
     this.stalled = false;
@@ -60,13 +73,14 @@ export class Driver {
  * give the same trajectories.
  */
 export class World {
-  constructor({ seed, brains, traffic = true, lanes = 3 }) {
+  constructor({ seed, brains, traffic = true, density = 1, lanes = 3 }) {
     this.seed = seed;
     this.time = 0;
     this.steps = 0;
     this.road = new Road(seed, { lanes });
-    this.traffic = traffic ? new Traffic(this.road, seed) : null;
+    this.traffic = traffic ? new Traffic(this.road, seed, { density }) : null;
     this.projection = { s: 0, d: 0, index: 0 };
+    this.pose = { x: 0, y: 0, heading: 0 };
     this.road.extendTo(this.horizon() + 200);
 
     const start = this.road.pose(START_S, this.road.laneOffset(Math.floor(lanes / 2)), {});
@@ -107,9 +121,21 @@ export class World {
     const road = this.road;
 
     const readings = sensors.sense(car, road, driver.s, this.traffic);
-    inputs.set(readings);
-    inputs[readings.length] = car.speed / car.spec.maxSpeed;
-    inputs[readings.length + 1] = car.steerAngle / car.spec.maxSteer;
+    const n = readings.length;
+    if (!driver.previous) driver.previous = Float64Array.from(readings);
+    for (let r = 0; r < n; r++) {
+      const closing = ((readings[r] - driver.previous[r]) * sensors.ranges[r]) / DT / CLOSING_SCALE;
+      inputs[r] = readings[r];
+      // a ray that swaps targets jumps; the clamp keeps that from shouting
+      inputs[n + r] = closing < -1 ? -1 : closing > 1 ? 1 : closing;
+      driver.previous[r] = readings[r];
+    }
+    road.pose(driver.s, 0, this.pose);
+    const headingError = wrapAngle(car.heading - this.pose.heading) / HEADING_SCALE;
+    inputs[2 * n] = driver.d / road.halfWidth;
+    inputs[2 * n + 1] = headingError < -1 ? -1 : headingError > 1 ? 1 : headingError;
+    inputs[2 * n + 2] = car.speed / car.spec.maxSpeed;
+    inputs[2 * n + 3] = car.turning;
     const [pedal, steer] = driver.brain.forward(inputs);
     car.control(pedal, -pedal, steer);
     car.step(DT);
@@ -169,8 +195,8 @@ export class World {
  * Drives every brain on one seed until all are out, the clock runs out or
  * every survivor has covered `maxDistance`. Returns one outcome per brain.
  */
-export function runEpisode(brains, { seed, seconds = 90, maxDistance = Infinity, traffic = true }) {
-  const world = new World({ seed, brains, traffic });
+export function runEpisode(brains, { seed, seconds = 90, maxDistance = Infinity, traffic = true, density = 1 }) {
+  const world = new World({ seed, brains, traffic, density });
   const limit = Math.round(seconds / DT);
   while (world.alive > 0 && world.steps < limit) {
     world.step();
