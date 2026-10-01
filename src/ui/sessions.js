@@ -23,6 +23,9 @@ const LEAD_MARGIN = 25;
 
 export const km = (meters) => (meters / 1000).toFixed(2);
 
+const changesPerKm = (drivers) =>
+  (drivers.reduce((n, d) => n + d.planner.changes, 0) / Math.max(1, drivers.reduce((m, d) => m + d.distance, 0))) * 1000;
+
 function ending(driver) {
   const where = `${km(driver.distance)} km`;
   return driver.crashed ? `Crashed at ${where}` : `Too slow, out at ${where}`;
@@ -223,6 +226,9 @@ export class TrainSession {
       survived,
       crashed,
       seconds: this.roundSeconds,
+      // over the whole field, so a few weavers don't hide a field that never moves over
+      leaderChangesPerKm: (() => { const d = drivers[distances.indexOf(best)]; return (d.planner.changes / Math.max(1, d.distance)) * 1000; })(),
+      changesPerKm: (drivers.reduce((n, d) => n + d.planner.changes, 0) / Math.max(1, distances.reduce((a, b) => a + b, 0))) * 1000,
     });
     const why = survived ? `time up, ${survived} still driving` : "everyone out";
     this.say(`Generation ${summary.generation + 1} · ${why} · best ${km(best)} km`);
