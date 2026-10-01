@@ -73,8 +73,12 @@ brain, a fifth of the way into a lane change.
   seed fully deterministic however many cars are learning on it, and makes
   the task harder: a car that cuts in is only announced by its indicator.
 - **Fitness.** Meters of road covered, minus 300 for crashing or for being
-  caught by a line that sweeps up the road at 18 km/h. Nothing rewards a
-  lane change as such; the network overtakes because it covers more road.
+  caught by a line that sweeps up the road at 18 km/h, minus 4 m for every
+  second spent in a left lane while the lane to its right is free (nobody
+  within 15 m behind, the next car ahead at least 60 m off and no closer
+  than the one in its own lane). Nothing rewards a lane change as such; the
+  network overtakes because it covers more road, and moves back right
+  because staying left costs a little.
 - **Evolution.** Elitism (the best four carry over), tournament selection,
   BLX-0.25 blend crossover and gaussian mutation whose rate and size decay
   with a 40-generation half-life.
@@ -130,20 +134,21 @@ keeps every one of them in its lane; the mean is what climbs. `--density`
 scales the traffic and `--resume` starts from the brain at `--out` with
 gentler mutation. The schedule behind the shipped brain is
 `scripts/curriculum.sh`: two-minute episodes in full traffic, then
-five-minute ones on more and more roads per generation. The whole thing
-took about 50 minutes on a 14-core laptop.
+five-minute ones on more and more roads per generation, and last a
+fine-tune with the keep-right penalty. The whole thing took about an hour
+on a 14-core laptop.
 
 To score a brain on roads it has never seen:
 
 ```console
 $ node scripts/evaluate.mjs --seeds 9001,9002,9003,9004,9005
  seed   meters      s   km/h  lanes  ended
- 9001     7332  300.0   88.0     34  time
- 9002     6790  300.0   81.5     28  time
- 9003     7056  300.0   84.7     31  time
- 9004     6478  300.0   77.7     27  time
- 9005     7007  300.0   84.1     32  time
-mean 6933 m, median 7007 m, 5 of 5 still on the road at the end, 4.4 lane changes per km
+ 9001     7527  300.0   90.3     34  time
+ 9002     6791  300.0   81.5     30  time
+ 9003     6547  300.0   78.6     40  time
+ 9004     6479  300.0   77.7     31  time
+ 9005     7020  300.0   84.2     40  time
+mean 6873 m, median 6791 m, 5 of 5 still on the road at the end, 5.1 lane changes per km
 ```
 
 Brains trained in the page can be exported as JSON and loaded back with
@@ -156,26 +161,32 @@ was never trained or validated on, five minutes each, full traffic:
 
 | | before (rays, steering) | now (lane scan, planner) |
 |---|---|---|
-| Mean distance | 4.05 km | 6.85 km |
-| Median distance | 4.66 km | 7.06 km |
+| Mean distance | 4.05 km | 6.74 km |
+| Median distance | 4.66 km | 7.07 km |
 | Still on the road after five minutes | 20 of 30 | 27 of 30 |
-| Average speed | 56 km/h | 85 km/h |
-| Lane changes | – | 4.2 per km |
-| Shortest run | 1.39 km | 0.61 km |
+| Average speed | 56 km/h | 86 km/h |
+| Lane changes | – | 5.0 per km |
+| In a left lane with the right lane free | – | 17 s of every 5 min |
+| Shortest run | 1.39 km | 0.60 km |
 
 "Before" is the previous version of this project, a 32-20-10-2 network
 steering straight from 14 ray sensors, on the old traffic. The traffic is
 different now (every lane mixes slow and fast cars, and cars blink before
 moving over), so the two columns are not the same exam; the old driver
-mostly followed the fast lane, the new one overtakes about every 240 m.
+mostly followed the fast lane, the new one changes lanes about every 200 m.
 
 Every number comes from `npm run evaluate -- --write`, which writes
 `scripts/results.json`; the page reads the same file. Traffic tops out at
 94 km/h and the car at 115, so the average speed is what overtaking buys.
 Of the three crashes, one happens while moving over, the other two at full
-speed into slower traffic it brakes for too late, both in the last
-fifteen seconds. Nothing in the fitness asks it to keep right after an
-overtake, and it doesn't.
+speed into slower traffic it brakes for too late, late in the run.
+
+Keeping right is learned, and only partly. Before the keep-right penalty
+the same network spent 29 s of every five minutes in a left lane with a
+free lane beside it; after a fine-tune with the penalty, 17 s. It now
+signals and moves back after most overtakes, at the cost of about 0.1 km
+of mean distance; the rest of the time it holds the left lane through a
+gap it judges too short to be worth two lane changes.
 
 <p align="center">
   <img src=".github/assets/train.png" width="880" alt="Train mode: an in-browser run a few minutes in, with the best and mean distance per generation">
