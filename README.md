@@ -26,14 +26,13 @@ that run unchanged in the browser and in Node.
 
 ## How it works
 
-```
-   road + traffic ──► 14 rays ──► 32 inputs ──► 20 ──► 10 ──► pedal, steer
-         ▲            (11 ahead,   (distance,     tanh    tanh       │
-         │             3 mirrors)   closing rate,                    ▼
-         │                          lane offset,             bicycle model
-         └─────────── fixed 1/60 s step ◄────────── heading,  ◄──────┘
-                                                    speed, turning)
-```
+<p align="center">
+  <img src=".github/assets/how-it-works.png" width="880" alt="Diagram: sensors feed 32 inputs into a 32-20-10-2 network whose pedal and steer move the car every 1/60 s; each generation 60 cars drive one road, are scored by distance, and the best four seed the next">
+</p>
+
+Every 1/60 s the car reads its rays, the network turns 32 numbers into a
+pedal and a steering command, and the car moves. The values in the diagram
+are one real moment from the shipped brain, 20 seconds into a run.
 
 - **Road.** A seeded highway built from clothoids, so curvature ramps
   smoothly and there are no kinks for the rays to trip on. It is generated
@@ -63,7 +62,7 @@ brains, same trajectories, on every Node release from 20 to 25. (It avoids
 replays all 30 held-out runs and checks them to the meter.
 
 <p align="center">
-  <img src=".github/assets/anatomy.png" width="420" alt="Spec sheet of the car: sensors, network, controls, fitness">
+  <img src=".github/assets/anatomy.png" width="440" alt="The page's spec sheet of the car in focus: sensors, network, controls, fitness, drawn live">
 </p>
 
 ## Quickstart
