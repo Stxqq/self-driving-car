@@ -69,8 +69,9 @@ function say(text) {
 const rng = new Rng((Math.random() * 2 ** 32) >>> 0);
 const pilot = new Pilot();
 const sessions = {};
-function newTraining(ancestor) {
+function newTraining(ancestor, origin = null) {
   const session = new TrainSession({ rng, say, ancestor });
+  session.origin = origin;
   session.speed = trainSpeed;
   return session;
 }
@@ -174,7 +175,9 @@ function updateBrainStatus() {
     const train = sessions.train;
     status.textContent = train.champion
       ? `Winner of generation ${train.generation}`
-      : "Random weights, first generation";
+      : train.origin
+        ? `Small mutations of the ${train.origin} brain, first generation`
+        : "Random weights, first generation";
   } else {
     status.textContent = "The network shows what the pretrained brain would do in your place.";
   }
@@ -195,7 +198,9 @@ function updateChart(session) {
       $("#chart-title").textContent = "Distance";
       $("#chart-note").textContent = "per generation";
       const last = history.at(-1);
-      const tally = last ? `<br>Last round: ${last.survived} made it to ${last.seconds} s, ${last.crashed} crashed.` : "";
+      const tally = last
+        ? `<br>Last round: ${last.survived} made it to ${last.seconds} s, ${last.crashed} crashed, ${last.changesPerKm.toFixed(1)} lane changes per km.`
+        : "";
       legend.innerHTML = `<i style="background:#111113"></i><span>best</span><i style="background:#9a9aa2"></i><span>mean</span>${tally}`;
       return {
         series: [
@@ -347,7 +352,7 @@ $("#new-road").addEventListener("click", () => sessions.watch.newRun());
 
 function adopt(brain, source) {
   if (mode === "train") {
-    sessions.train = newTraining(brain);
+    sessions.train = newTraining(brain, source.toLowerCase());
     say("Evolving from the loaded brain");
   } else {
     watchSource = source;
@@ -374,6 +379,13 @@ const brainActions = {
   },
   import() {
     $("#import-file").click();
+  },
+  // opt-in: the first generation is the shipped brain and gentle
+  // mutations of it, so lane changes are there from the start
+  pretrained() {
+    sessions.train = newTraining(pretrained, "pretrained");
+    say("Evolving from the pretrained brain");
+    updateBrainStatus();
   },
   reset() {
     if (mode === "train") {

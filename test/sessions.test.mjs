@@ -14,3 +14,13 @@ test("training at 64x gives the same generations as at 1x", () => {
   };
   assert.deepEqual(run(64), run(1));
 });
+
+test("starting from the pretrained brain, the field changes lanes from the first round", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { Brain } = await import("../src/sim/brain.js");
+  const ancestor = Brain.fromJSON(JSON.parse(await readFile(new URL("../src/brains/pretrained.json", import.meta.url), "utf8")));
+  const session = new TrainSession({ rng: new Rng(1), say: () => {}, ancestor });
+  session.speed = 1e9;
+  while (session.generation < 2) session.advance(1);
+  assert.ok(session.history[1].changesPerKm > 1, `${session.history[1].changesPerKm.toFixed(2)} per km`);
+});

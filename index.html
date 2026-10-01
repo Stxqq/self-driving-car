@@ -126,6 +126,7 @@
                   <button type="button" data-brain="export">Export</button>
                   <button type="button" data-brain="import">Import</button>
                   <button type="button" data-brain="reset">Reset</button>
+                  <button type="button" data-brain="pretrained" class="only-train">From pretrained</button>
                 </div>
                 <input type="file" id="import-file" accept="application/json,.json" hidden>
               </div>
@@ -220,6 +221,7 @@
         <li><em>02</em><span>Each drives until it crashes, falls behind a line moving at 18 km/h, or the round is up. Rounds start at 45 s and grow by half each time a car is still driving at the end, up to five minutes.</span></li>
         <li><em>03</em><span>Its score is the distance covered, minus 300 m for going out early.</span></li>
         <li><em>04</em><span>The best four carry over. The rest are children of tournament winners, crossed and mutated.</span></li>
+        <li><em>05</em><span>Overtaking takes far longer to find than sixty cars and a few minutes allow. From pretrained starts the field from mutations of the shipped brain instead, which changes lanes from the first round.</span></li>
       </ol>
 
       <h2 class="dear section-gap">Who decides what</h2>
