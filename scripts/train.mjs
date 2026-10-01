@@ -138,7 +138,7 @@ console.log(" gen   best m   mean m  alive    mut     s");
 const started = performance.now();
 for (let g = 0; g < GENERATIONS; g++) {
   const t0 = performance.now();
-  const seeds = Array.from({ length: SEEDS_PER_GEN }, (_, j) => 100 + (evolution.generation * SEEDS_PER_GEN + j));
+  const seeds = Array.from({ length: SEEDS_PER_GEN }, (_, j) => 100000 * Number(args.seed) + evolution.generation * SEEDS_PER_GEN + j);
   const table = await pool.drive(evolution.population, seeds, SECONDS);
 
   const scores = table.map((runs) => mean(runs.map(fitness)));
