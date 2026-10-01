@@ -2,6 +2,7 @@ import { Brain } from "./brain.js";
 import { Rng, deriveSeed } from "./rng.js";
 
 const CRASH_PENALTY = 300;
+// as bad as a crash, or parking becomes the safe strategy early on
 const STALL_PENALTY = 300;
 
 /** Meters of road covered, minus a flat penalty for how the run ended. */
@@ -24,6 +25,9 @@ const DEFAULTS = {
   mutationScale: [0.45, 0.08],
   halfLife: 40,
 };
+
+// for a population seeded from a driver that already works
+export const FINE_TUNE = Object.freeze({ mutationRate: [0.05, 0.02], mutationScale: [0.15, 0.05] });
 
 /**
  * A generational genetic algorithm over Brain weights: elitism, tournament

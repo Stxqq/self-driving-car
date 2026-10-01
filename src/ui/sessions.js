@@ -2,7 +2,7 @@
 // a population, or hand the car to the person at the keyboard. Each one
 // turns real seconds into fixed 1/60 s sim steps.
 
-import { Evolution, fitness } from "../sim/evolution.js";
+import { Evolution, FINE_TUNE, fitness } from "../sim/evolution.js";
 import { DEFAULT_LAYERS, DT, World } from "../sim/world.js";
 
 const PAUSE_AFTER_RUN = 1.8;
@@ -142,8 +142,7 @@ export class TrainSession {
       size: POPULATION,
       seed: rng.uint(),
       ancestor,
-      // starting from a good driver; don't shake it too hard
-      ...(ancestor && { mutationRate: [0.05, 0.02], mutationScale: [0.15, 0.05] }),
+      ...(ancestor && FINE_TUNE),
     });
     this.startGeneration();
   }
