@@ -54,7 +54,7 @@
             <i class="blinker" data-side="left"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M10 4 2 12l8 8v-5h12V9H10z"/></svg></i>
             <div class="readout-speed"><b id="kmh">0</b><span>km/h</span></div>
             <i class="blinker" data-side="right"><svg width="14" height="14" viewBox="0 0 24 24"><path d="m14 4 8 8-8 8v-5H2V9h12z"/></svg></i>
-            <div class="readout-set"><span>Max</span><b id="set-speed">115</b><em id="readout-state">Lane keep</em></div>
+            <div class="readout-set"><span id="set-label">Max</span><b id="set-speed">115</b><em id="readout-state">Lane keep</em></div>
           </div>
           <div class="touch" aria-label="Driving controls">
             <div class="touch-pair">
@@ -63,7 +63,7 @@
             </div>
             <div class="touch-pair">
               <button type="button" data-control="brake" aria-label="Brake"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
-              <button type="button" data-control="gas" aria-label="Accelerate"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>
+              <button type="button" data-control="gas" aria-label="Raise set speed"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></button>
             </div>
           </div>
         </div>
@@ -111,7 +111,8 @@
                 <small>Keys</small>
                 <p class="keys">
                   <span><kbd>←</kbd><kbd>→</kbd></span><span>change lane</span>
-                  <span><kbd>↑</kbd><kbd>↓</kbd></span><span>gas, brake</span>
+                  <span><kbd>↑</kbd></span><span>raise set speed</span>
+                  <span><kbd>↓</kbd></span><span>brake</span>
                   <span><kbd>R</kbd></span><span>again</span>
                 </p>
               </div>
@@ -237,7 +238,8 @@
         The brain in Watch came out of a longer run, headless in Node, on
         five-minute episodes in full traffic. These are its numbers on
         <span data-fact="seeds">30</span> roads it never saw. Traffic
-        doesn't see it and never makes room for it; it only signals.
+        drives around it like people would: it keeps its distance, signals
+        and overtakes, but it never makes room for a car that cuts in.
       </p>
       <div class="rows facts">
         <div class="row"><span>Mean distance</span><b data-fact="mean">–</b></div>

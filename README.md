@@ -21,6 +21,14 @@ A small neural network that taught itself, by evolution, to drive a curvy three-
       <img src=".github/assets/launch-light.png" alt="Open the live demo" width="300">
     </picture>
   </a>
+  <a href="https://github.com/Stxqq/self-driving-car">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/star-dark.png">
+      <img src=".github/assets/star-light.png" alt="Star on GitHub" width="260">
+    </picture>
+  </a>
+  <br>
+  <sub>If it made you smile, a star helps more people find it.</sub>
 </p>
 
 Nobody shows the network how to drive. Each generation, a population of
@@ -34,6 +42,11 @@ decides the pedal and which lane it wants to be in. A planner turns "the
 lane to the left" into a lane change: it blinks, waits for the gap, moves
 over on a smooth S-curve and settles in the center of the new lane. The
 blue ribbon on the page is that plan.
+
+In Drive you take the network's place, with the same planner: the car
+runs on cruise control from a set speed of 70 km/h, holding ↑ raises it,
+↓ brakes (and the set speed follows you down), ← and → ask for a lane
+change. The network card keeps showing what the trained brain would do.
 
 There is no library underneath: the road, the car, the perception, the
 planner, the traffic, the network and the genetic algorithm are about
@@ -53,8 +66,9 @@ brain, a fifth of the way into a lane change.
 - **Road.** A seeded highway built from clothoids, so curvature ramps
   smoothly and there are no kinks to trip the steering. It is generated
   lazily as the car drives.
-- **Car.** A kinematic bicycle model in SI units (4.4 m long, 32 m/s top
-  speed). Steer asks for a share of the available cornering grip rather than
+- **Car.** A kinematic bicycle model in SI units, tuned like a family
+  hatchback: 4.4 m long, 0 to 100 km/h in 9.8 s, 115 km/h top speed, 8 m/s²
+  of braking, and engine braking off the throttle. Steer asks for a share of the available cornering grip rather than
   a wheel angle, so the same output means the same sideways pull at 30 km/h
   and at 110 km/h. Take a 110 m bend at full speed and the grip runs out.
 - **Perception.** Not raw pixels or rays but what a camera stack hands its
@@ -78,9 +92,14 @@ brain, a fifth of the way into a lane change.
 - **Traffic.** Background cars follow the Intelligent Driver Model, want
   speeds between 61 and 94 km/h with every lane mixing slow and fast,
   overtake on the left and move back right once past. They blink for 1.2 s
-  before changing lanes and never look for the learning cars, which keeps a
-  seed fully deterministic however many cars are learning on it, and makes
-  the task harder: a car that cuts in is only announced by its indicator.
+  before changing lanes. They treat the learning cars like any other car:
+  keep their distance behind one, overtake a slow one on the left, and
+  don't move into a lane where one is driving, blinking or moving over. A
+  crash is therefore always the learning car's doing: it cut in too close,
+  braked hard in front of someone, or ran into a car it was following.
+  Because traffic reacts to the learning cars, the headless trainer drives
+  every brain on its road alone, so a score never depends on who else was
+  on the road. In Train mode in the page all 60 share one road.
 - **Fitness.** Meters of road covered, minus 300 for crashing or for being
   caught by a line that sweeps up the road at 18 km/h, minus 4 m for every
   second spent in a left lane while the lane to its right is free (nobody
@@ -99,7 +118,8 @@ only has to find *when* and *where*, and overtaking became the thing that
 separates a good driver from a safe one.
 
 The simulation is deterministic down to the last bit: same seed, same
-brains, same trajectories. (It avoids `**` in the physics for that reason;
+brains, same trajectories, and the same generations at 64x as at 1x (the
+speed buttons only run more fixed 1/60 s steps per frame; a test checks it). (It avoids `**` in the physics for that reason;
 V8 changed its `pow` between releases.) The test suite replays all 30
 held-out runs and checks them to the meter.
 
@@ -152,12 +172,12 @@ To score a brain on roads it has never seen:
 ```console
 $ node scripts/evaluate.mjs --seeds 9001,9002,9003,9004,9005
  seed   meters      s   km/h  lanes  ended
- 9001     7527  300.0   90.3     34  time
- 9002     6791  300.0   81.5     30  time
- 9003     6547  300.0   78.6     40  time
- 9004     6479  300.0   77.7     31  time
- 9005     7020  300.0   84.2     40  time
-mean 6873 m, median 6791 m, 5 of 5 still on the road at the end, 5.1 lane changes per km
+ 9001     7504  300.0   90.0     35  time
+ 9002     6464  300.0   77.6     42  time
+ 9003     7223  300.0   86.7     27  time
+ 9004     6465  300.0   77.6     37  time
+ 9005     3737  174.4   77.2     26  crashed
+mean 6279 m, median 6465 m, 4 of 5 still on the road at the end, 5.3 lane changes per km
 ```
 
 Brains trained in the page can be exported as JSON and loaded back with
@@ -170,13 +190,13 @@ was never trained or validated on, five minutes each, full traffic:
 
 | | before (rays, steering) | now (lane scan, planner) |
 |---|---|---|
-| Mean distance | 4.05 km | 6.74 km |
-| Median distance | 4.66 km | 7.07 km |
-| Still on the road after five minutes | 20 of 30 | 27 of 30 |
-| Average speed | 56 km/h | 86 km/h |
-| Lane changes | – | 5.0 per km |
-| In a left lane with the right lane free | – | 17 s of every 5 min |
-| Shortest run | 1.39 km | 0.60 km |
+| Mean distance | 4.05 km | 6.90 km |
+| Median distance | 4.66 km | 7.23 km |
+| Still on the road after five minutes | 20 of 30 | 28 of 30 |
+| Average speed | 56 km/h | 87 km/h |
+| Lane changes | – | 5.1 per km |
+| In a left lane with the right lane free | – | 22 s of every 5 min |
+| Shortest run | 1.39 km | 0.64 km |
 
 "Before" is the previous version of this project, a 32-20-10-2 network
 steering straight from 14 ray sensors, on the old traffic. The traffic is
@@ -187,15 +207,23 @@ mostly followed the fast lane, the new one changes lanes about every 200 m.
 Every number comes from `npm run evaluate -- --write`, which writes
 `scripts/results.json`; the page reads the same file. Traffic tops out at
 94 km/h and the car at 115, so the average speed is what overtaking buys.
-Of the three crashes, one happens while moving over, the other two at full
-speed into slower traffic it brakes for too late, late in the run.
+The two crashes both happen at full speed, running into slower traffic it
+brakes for too late.
+
+These numbers are with the current traffic and car, which now react to
+the learning car and accelerate and brake like a real hatchback. The brain
+was trained before those changes and re-evaluated after them; it does
+slightly better than before (traffic no longer cuts in on it blind or runs
+into it). A fine-tune on the new traffic scored higher on its eight
+validation roads but worse on the held-out ones, six crashes instead of
+two, so it was not kept.
 
 Keeping right is learned, and only partly. Before the keep-right penalty
-the same network spent 29 s of every five minutes in a left lane with a
-free lane beside it; after a fine-tune with the penalty, 17 s. It now
-signals and moves back after most overtakes, at the cost of about 0.1 km
-of mean distance; the rest of the time it holds the left lane through a
-gap it judges too short to be worth two lane changes.
+the network spent 29 s of every five minutes in a left lane with a free
+lane beside it; after a fine-tune with the penalty, 17 s on the old
+traffic and 22 s on the current one. It signals and moves back after most
+overtakes; the rest of the time it holds the left lane through a gap it
+judges too short to be worth two lane changes.
 
 <p align="center">
   <img src=".github/assets/train.png" width="880" alt="Train mode: an in-browser run a few minutes in, with the best and mean distance per generation">
