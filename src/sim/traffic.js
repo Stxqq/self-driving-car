@@ -123,19 +123,25 @@ export class Traffic {
 
   followAccel(car, i) {
     const v = car.speed;
-    const freeRoad = 1 - (v / car.desiredSpeed) ** 4;
+    // plain multiplies, not **: V8's pow changed between Node releases and a
+    // last-bit difference here grows into a different run five minutes later
+    const ratio = v / car.desiredSpeed;
+    const freeRoad = 1 - ratio * ratio * ratio * ratio;
     let leader = this.leaderIn(car.lane, i, car.s, 150);
     const other = car.changingLanes ? this.leaderIn(car.targetLane, i, car.s, 150) : null;
     if (other && (!leader || other.s < leader.s)) leader = other;
     if (!leader) return this.comfortAccel * freeRoad;
 
+    // overlapping after a cut-in; keep desiredGap / gap finite
     const gap = Math.max(0.1, leader.s - car.s - CAR_SPEC.length);
     const closing = v - leader.speed;
     const desiredGap =
       this.standstillGap +
       Math.max(0, v * this.timeHeadway + (v * closing) / (2 * Math.sqrt(this.comfortAccel * this.comfortBrake)));
-    const accel = this.comfortAccel * (freeRoad - (desiredGap / gap) ** 2);
-    return Math.max(accel, -9);
+    const crowding = desiredGap / gap;
+    const accel = this.comfortAccel * (freeRoad - crowding * crowding);
+    // IDM asks for unbounded braking when someone cuts in; tires can't give it
+    return Math.max(accel, -CAR_SPEC.maxBrake);
   }
 
   /** Speeds a car spawned in `lane` wants to drive. */

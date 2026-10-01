@@ -10,13 +10,13 @@
     "seconds": 300,
     "meters": 6000
   },
-  "meanMeters": 4010,
+  "meanMeters": 3269,
   "runs": [
     {
       "seed": 9001,
-      "meters": 4554,
+      "meters": 4540,
       "seconds": 300,
-      "kmh": 54.6,
+      "kmh": 54.5,
       "ended": "time"
     },
     {
@@ -28,7 +28,7 @@
     },
     {
       "seed": 9003,
-      "meters": 4532,
+      "meters": 4534,
       "seconds": 300,
       "kmh": 54.4,
       "ended": "time"
@@ -42,10 +42,10 @@
     },
     {
       "seed": 9005,
-      "meters": 4741,
-      "seconds": 300,
-      "kmh": 56.9,
-      "ended": "time"
+      "meters": 1049,
+      "seconds": 72.4,
+      "kmh": 52.2,
+      "ended": "crashed"
     }
   ]
 }

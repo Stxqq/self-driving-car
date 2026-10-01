@@ -47,7 +47,7 @@ export class Evolution {
   }
 
   annealed([start, end]) {
-    return end + (start - end) * 0.5 ** (this.generation / this.halfLife);
+    return end + (start - end) * Math.exp((-Math.LN2 * this.generation) / this.halfLife);
   }
 
   pick(order, scores) {

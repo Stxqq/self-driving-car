@@ -54,10 +54,12 @@ export class RayFan {
     visible.length = 0;
     if (traffic) {
       const near = traffic.within(s - reach, s + reach);
-      const cutoff = (range + car.spec.length) ** 2;
+      const cutoff = (range + car.spec.length) * (range + car.spec.length);
       for (let k = near.start; k < near.end; k++) {
         const other = near.cars[k];
-        if ((other.x - ox) ** 2 + (other.y - oy) ** 2 < cutoff) visible.push(other.polygon);
+        const dx = other.x - ox;
+        const dy = other.y - oy;
+        if (dx * dx + dy * dy < cutoff) visible.push(other.polygon);
       }
     }
 
