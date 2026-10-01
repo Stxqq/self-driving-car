@@ -16,8 +16,8 @@ test("pretrained brain covers 2 km on average on held-out seeds", () => {
   assert.ok(results.meanMeters >= 2000, `mean ${results.meanMeters} m`);
 });
 
-// The README quotes results.json; this keeps it honest. Any change to the
-// sim that moves a single car by a millimeter shows up here.
+// The README and the page quote results.json; this keeps them honest. Any
+// change to the sim that moves a single car by a millimeter shows up here.
 for (const run of results.runs) {
   test(`held-out seed ${run.seed} reproduces ${run.meters} m`, () => {
     const [o] = runEpisode([brain], { seed: run.seed, seconds: results.limits.seconds, maxDistance: results.limits.meters });
