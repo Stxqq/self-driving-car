@@ -20,6 +20,8 @@ const TRAFFIC = [
   ["#FED7AA", "rgba(124,45,18,.2)"],
 ];
 const FOLLOW = 0.085;
+// seconds of sim time a car that went out stays on the road, fading
+const CRASH_FADE = 2;
 
 /**
  * The share of the remaining distance to close this frame, so that
@@ -128,7 +130,7 @@ export class Stage {
     this.drawSweep(world);
     if (world.traffic) this.drawTraffic(world.traffic.within(s - reach, s + reach), world.time);
     if (focus && focus.alive) this.drawTracks(focus);
-    if (ghosts) this.drawGhosts(world.drivers, focus);
+    if (ghosts) this.drawGhosts(world.drivers, focus, world.time);
     if (focus) this.drawFocus(focus, world.time);
     // and the rear rays that run on past it
     if (atStart) this.fadeToTile(reach, reach, 0, -10, -reach);
@@ -423,11 +425,21 @@ export class Stage {
     }
   }
 
-  drawGhosts(drivers, focus) {
+  // Learners still driving in a faint ink; one that just went out stays a
+  // moment in red where it happened, then fades, instead of vanishing.
+  drawGhosts(drivers, focus, time) {
     const ctx = this.ctx;
     ctx.fillStyle = "rgba(17,17,19,.1)";
     for (const driver of drivers) {
       if (!driver.alive || driver === focus) continue;
+      this.body(driver.car.x, driver.car.y, driver.car.heading, 0);
+    }
+    for (const driver of drivers) {
+      if (driver.alive || driver === focus) continue;
+      const since = time - driver.time;
+      if (since > CRASH_FADE) continue;
+      const fade = 1 - since / CRASH_FADE;
+      ctx.fillStyle = driver.crashed ? `rgba(220,38,38,${(0.55 * fade).toFixed(3)})` : `rgba(17,17,19,${(0.25 * fade).toFixed(3)})`;
       this.body(driver.car.x, driver.car.y, driver.car.heading, 0);
     }
   }
