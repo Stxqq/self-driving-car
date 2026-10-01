@@ -6,8 +6,8 @@ const DEFAULTS = {
   firstSpawn: 70,
   minSpacing: 14,
   maxSpacing: 44,
-  minSpeed: 11,
-  maxSpeed: 21,
+  minSpeed: 9,
+  maxSpeed: 19,
   laneChangeTime: 3.2,
   // intelligent driver model
   comfortAccel: 1.4,

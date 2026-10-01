@@ -6,11 +6,11 @@ import { polygonsOverlap, polygonTouchesPolyline } from "./geometry.js";
 
 export const DT = 1 / 60;
 
-export const SENSOR_CONFIG = Object.freeze({ count: 9, spread: Math.PI * 0.9, range: 70 });
+export const SENSOR_CONFIG = Object.freeze({ count: 11, spread: Math.PI * 0.9, range: 70 });
 
 /** Inputs are the ray readings plus speed and current wheel angle. */
 export const INPUT_SIZE = SENSOR_CONFIG.count + 2;
-export const DEFAULT_LAYERS = Object.freeze([INPUT_SIZE, 12, 8, 2]);
+export const DEFAULT_LAYERS = Object.freeze([INPUT_SIZE, 16, 10, 2]);
 
 const START_S = 12;
 
