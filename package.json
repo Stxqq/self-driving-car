@@ -1,0 +1,21 @@
+{
+  "name": "self-driving-car",
+  "version": "0.1.0",
+  "description": "Cars that teach themselves to drive a curvy highway. Neural networks, a genetic algorithm and a deterministic simulator, no dependencies.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Stefan Carapic",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Stxqq/self-driving-car.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "train": "node scripts/train.mjs",
+    "evaluate": "node scripts/evaluate.mjs",
+    "serve": "python3 -m http.server 5101"
+  }
+}
