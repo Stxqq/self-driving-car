@@ -21,7 +21,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # the site is the repo root minus tests and training scripts; the page
       # still reads scripts/results.json for the held-out numbers
       - name: Assemble site
@@ -30,9 +30,9 @@ jobs:
           cp index.html styles.css _site/
           cp -r src _site/
           cp scripts/results.json _site/scripts/
-          if [ -f .github/assets/social.png ]; then cp .github/assets/social.png _site/; fi
+          cp .github/assets/social.png _site/
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: _site
       - id: deployment
