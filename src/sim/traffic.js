@@ -140,7 +140,7 @@ export class Traffic {
 
     const leader = this.leaderIn(car.lane, i, car.s, 60);
     const blocked = leader && leader.speed < car.desiredSpeed - 1.5;
-    if (!blocked && !rng.chance(0.12)) return;
+    if (!blocked && !rng.chance(0.05)) return;
 
     const options = [];
     if (car.lane > 0) options.push(car.lane - 1);
