@@ -3,17 +3,7 @@ import { DEFAULT_LAYERS } from "../sim/world.js";
 
 const KEY = "self-driving-car:brain";
 
-// localStorage throws in some private modes and when blocked; a missing
-// save is the right answer in all of those cases
-function storage() {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function checked(json) {
+function brainForThisCar(json) {
   const brain = Brain.fromJSON(json);
   if (brain.layers.join() !== DEFAULT_LAYERS.join()) {
     throw new Error(`This brain is [${brain.layers}], the car needs [${DEFAULT_LAYERS}]`);
@@ -21,10 +11,12 @@ function checked(json) {
   return brain;
 }
 
+// private modes and blocked storage throw; so does a brain saved for an
+// older sensor layout. All of them mean "nothing saved".
 export function savedBrain() {
   try {
-    const raw = storage()?.getItem(KEY);
-    return raw ? checked(JSON.parse(raw)) : null;
+    const raw = localStorage.getItem(KEY);
+    return raw ? brainForThisCar(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
@@ -32,7 +24,7 @@ export function savedBrain() {
 
 export function saveBrain(brain) {
   try {
-    storage()?.setItem(KEY, JSON.stringify(brain.toJSON()));
+    localStorage.setItem(KEY, JSON.stringify(brain.toJSON()));
     return true;
   } catch {
     return false;
@@ -50,5 +42,5 @@ export function downloadBrain(brain, filename) {
 }
 
 export async function readBrainFile(file) {
-  return checked(JSON.parse(await file.text()));
+  return brainForThisCar(JSON.parse(await file.text()));
 }
