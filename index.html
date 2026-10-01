@@ -4,18 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Self-driving car</title>
-  <meta name="description" content="A small neural network that learned to drive a curvy highway through traffic by evolution. Watch it, train your own in the browser, or take the wheel.">
+  <meta name="description" content="A small neural network that learned by evolution to drive a curvy highway: it keeps its lane, picks gaps and overtakes slower traffic with the indicator on. Watch it, train your own in the browser, or take the wheel.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://stxqq.github.io/self-driving-car/">
   <meta property="og:title" content="Self-driving car">
-  <meta property="og:description" content="A small neural network that learned to drive a curvy highway through traffic by evolution. Watch it, train your own in the browser, or take the wheel.">
+  <meta property="og:description" content="A small neural network that learned by evolution to drive a curvy highway: it keeps its lane, picks gaps and overtakes slower traffic with the indicator on. Watch it, train your own in the browser, or take the wheel.">
   <meta property="og:image" content="https://stxqq.github.io/self-driving-car/social.png">
   <meta property="og:image:width" content="1280">
   <meta property="og:image:height" content="640">
-  <meta property="og:image:alt" content="A black car on a white highway with its sensor rays, next to the network that drives it">
+  <meta property="og:image:alt" content="A black car changing lanes on a white highway, its planned path curving into the next lane, next to the network that drives it">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Self-driving car">
-  <meta name="twitter:description" content="A small neural network that learned to drive a curvy highway through traffic by evolution.">
+  <meta name="twitter:description" content="A small neural network that learned by evolution when to brake and which lane to be in, on a curvy highway full of traffic.">
   <meta name="twitter:image" content="https://stxqq.github.io/self-driving-car/social.png">
   <link rel="canonical" href="https://stxqq.github.io/self-driving-car/">
   <meta name="theme-color" content="#ffffff">
@@ -37,10 +37,11 @@
     <section class="intro rise">
       <h1 class="dear">Self-driving car</h1>
       <p class="gray">
-        A small neural network drives a curvy highway through traffic.
-        It learned by evolution, with no examples to copy, only distance
-        covered and a great many crashed cars. Watch it, evolve your own,
-        or take the wheel.
+        A small neural network drives a curvy highway through traffic. It
+        keeps to its lane, decides when to brake and when to overtake, and
+        signals before it moves over. It learned all of that by evolution,
+        with no examples to copy, only distance covered and a great many
+        crashed cars. Watch it, evolve your own, or take the wheel.
       </p>
     </section>
 
@@ -49,10 +50,16 @@
         <div class="view">
           <canvas class="road" id="road" role="img" aria-label="Top-down view of the highway following the car in focus"></canvas>
           <div class="toast" id="toast" role="status" aria-live="polite"></div>
+          <div class="readout" id="readout" aria-hidden="true">
+            <i class="blinker" data-side="left"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M10 4 2 12l8 8v-5h12V9H10z"/></svg></i>
+            <div class="readout-speed"><b id="kmh">0</b><span>km/h</span></div>
+            <i class="blinker" data-side="right"><svg width="14" height="14" viewBox="0 0 24 24"><path d="m14 4 8 8-8 8v-5H2V9h12z"/></svg></i>
+            <div class="readout-set"><span>Max</span><b id="set-speed">115</b><em id="readout-state">Lane keep</em></div>
+          </div>
           <div class="touch" aria-label="Driving controls">
             <div class="touch-pair">
-              <button type="button" data-control="left" aria-label="Steer left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-              <button type="button" data-control="right" aria-label="Steer right"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+              <button type="button" data-control="left" aria-label="Change lane left"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+              <button type="button" data-control="right" aria-label="Change lane right"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
             </div>
             <div class="touch-pair">
               <button type="button" data-control="brake" aria-label="Brake"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -79,15 +86,15 @@
 
           <div class="hud-col">
             <div class="card net-card">
-              <div class="card-head"><b>Network</b><em><span data-fact="weights">892</span> weights</em></div>
+              <div class="card-head"><b>Network</b><em><span data-fact="weights">362</span> weights</em></div>
               <canvas class="net" id="net" role="img" aria-label="The network's weights and live activations"></canvas>
               <dl class="net-key">
-                <div><dt>00–10</dt><dd>rays ahead</dd></div>
-                <div><dt>28</dt><dd>lane offset</dd></div>
-                <div><dt>11–13</dt><dd>mirrors</dd></div>
-                <div><dt>29</dt><dd>heading</dd></div>
-                <div><dt>14–27</dt><dd>closing rate</dd></div>
-                <div><dt>30–31</dt><dd>speed, turning</dd></div>
+                <div><dt>00–04</dt><dd>lane to the left</dd></div>
+                <div><dt>15</dt><dd>speed</dd></div>
+                <div><dt>05–09</dt><dd>own lane</dd></div>
+                <div><dt>16</dt><dd>curve ahead</dd></div>
+                <div><dt>10–14</dt><dd>lane to the right</dd></div>
+                <div><dt>17–18</dt><dd>lane change</dd></div>
               </dl>
             </div>
 
@@ -103,7 +110,7 @@
               <div class="ctl only-drive">
                 <small>Keys</small>
                 <p class="keys">
-                  <span><kbd>←</kbd><kbd>→</kbd></span><span>steer</span>
+                  <span><kbd>←</kbd><kbd>→</kbd></span><span>change lane</span>
                   <span><kbd>↑</kbd><kbd>↓</kbd></span><span>gas, brake</span>
                   <span><kbd>R</kbd></span><span>again</span>
                 </p>
@@ -145,6 +152,14 @@
               <path d="M14 118 Q32 115 50 118 L52 128 Q32 132 12 128 Z" fill="rgba(255,255,255,.16)"/>
               <rect x="8" y="3" width="11" height="3.5" rx="1.75" fill="rgba(255,255,255,.7)"/>
               <rect x="45" y="3" width="11" height="3.5" rx="1.75" fill="rgba(255,255,255,.7)"/>
+              <g data-signal="left">
+                <rect x="1.5" y="9" width="5" height="11" rx="2.5"/>
+                <rect x="1.5" y="136" width="5" height="11" rx="2.5"/>
+              </g>
+              <g data-signal="right">
+                <rect x="57.5" y="9" width="5" height="11" rx="2.5"/>
+                <rect x="57.5" y="136" width="5" height="11" rx="2.5"/>
+              </g>
               <g data-brakes>
                 <rect x="7" y="149.5" width="12" height="3.5" rx="1.75" fill="#dc2626"/>
                 <rect x="45" y="149.5" width="12" height="3.5" rx="1.75" fill="#dc2626"/>
@@ -162,27 +177,31 @@
             </div>
 
             <div class="anno-item anno-left" style="top: 50%">
-              <div class="anno-label"><em>01</em><b>Sensors</b><span>11 ahead, 3 mirrors</span></div>
+              <div class="anno-label"><em>01</em><b>Lane scan</b><span>3 lanes, 90 m ahead, 45 back</span></div>
               <i class="anno-line"></i><i class="anno-dot"></i>
             </div>
             <div class="anno-item anno-right" style="top: 36%">
               <i class="anno-dot"></i><i class="anno-line"></i>
-              <div class="anno-label"><em>02</em><b>Network</b><span>32 inputs, 892 weights</span></div>
+              <div class="anno-label"><em>02</em><b>Network</b><span><span data-fact="inputs">19</span> inputs, <span data-fact="weights">362</span> weights</span></div>
             </div>
             <div class="anno-item anno-left" style="top: 19.3%">
-              <div class="anno-label"><em>03</em><b>Controls</b><span>Pedal and steer</span></div>
+              <div class="anno-label"><em>03</em><b>Controls</b><span>Pedal and lane</span></div>
               <i class="anno-line"></i><i class="anno-dot"></i>
+            </div>
+            <div class="anno-item anno-right" style="top: 8%">
+              <i class="anno-dot"></i><i class="anno-line"></i>
+              <div class="anno-label"><em>04</em><b>Planner</b><span>Blinks 0.7 s, moves over in 2.6 s</span></div>
             </div>
             <div class="anno-item anno-right" style="top: 92%">
               <i class="anno-dot"></i><i class="anno-line"></i>
-              <div class="anno-label"><em>04</em><b>Fitness</b><span>Meters covered, −300 for a crash</span></div>
+              <div class="anno-label"><em>05</em><b>Fitness</b><span>Meters covered, −300 for a crash</span></div>
             </div>
           </div>
           <div class="anno-hint"><span class="on-hover">Hover for details</span><span class="on-touch">Tap for details</span></div>
         </div>
         <figcaption class="feed-caption">
           <h2>Anatomy</h2>
-          <p>Live from the car in focus · rays on a square-root scale</p>
+          <p>Live from the car in focus · gaps on a square-root scale</p>
         </figcaption>
       </figure>
     </section>
@@ -195,24 +214,35 @@
         the parents of the next generation.
       </p>
       <ol class="rows steps">
-        <li><em>01</em><span>Sixty cars with random weights start on the same road.</span></li>
+        <li><em>01</em><span>Sixty cars with random weights start on the same road. The planner keeps each one in its lane, so even these drive; what they lack is any idea of when to brake or which lane to be in.</span></li>
         <li><em>02</em><span>Each drives until it crashes, falls behind a line moving at 18 km/h, or a minute is up.</span></li>
         <li><em>03</em><span>Its score is the distance covered, minus 300 m for going out early.</span></li>
         <li><em>04</em><span>The best four carry over. The rest are children of tournament winners, crossed and mutated.</span></li>
       </ol>
 
+      <h2 class="dear section-gap">Who decides what</h2>
+      <p class="gray">
+        The network chooses the pedal and the lane. A planner does the rest,
+        the way a driver-assist system would: it blinks for 0.7 s, waits
+        while a car is level with it in the target lane, moves over on a
+        2.6 s S-curve and steers along it with pure pursuit. The blue
+        ribbon is that plan. Whether to overtake, and whether the gap is
+        worth it, is the network's call alone.
+      </p>
+
       <h2 class="dear section-gap">The trained driver</h2>
       <p class="gray">
-        The brain in Watch came out of a longer curriculum, run headless in
-        Node: an empty road first, then traffic, then five-minute episodes.
-        These are its numbers on <span data-fact="seeds">30</span> roads it
-        never saw. Traffic doesn't see it and never makes room for it.
+        The brain in Watch came out of a longer run, headless in Node, on
+        five-minute episodes in full traffic. These are its numbers on
+        <span data-fact="seeds">30</span> roads it never saw. Traffic
+        doesn't see it and never makes room for it; it only signals.
       </p>
       <div class="rows facts">
         <div class="row"><span>Mean distance</span><b data-fact="mean">–</b></div>
         <div class="row"><span>Median distance</span><b data-fact="median">–</b></div>
         <div class="row"><span>Never crashed or fell behind</span><b data-fact="survived">–</b></div>
         <div class="row"><span>Average speed</span><b data-fact="speed">–</b></div>
+        <div class="row"><span>Lane changes</span><b data-fact="changes">–</b></div>
         <div class="row"><span>Weights</span><b data-fact="weights">–</b></div>
       </div>
     </section>

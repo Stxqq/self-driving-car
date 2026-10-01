@@ -1,3 +1,4 @@
+import { SIGNAL_LEAD } from "../sim/planner.js";
 import { DT } from "../sim/world.js";
 
 const KEYS = {
@@ -11,21 +12,24 @@ const KEYS = {
   KeyD: "right",
 };
 
-// how fast the outputs follow the keys, per second; a tap of the arrow
-// key shouldn't throw the car across two lanes
-const STEER_RATE = 2.6;
+// how fast the pedal follows the keys, per second
 const PEDAL_RATE = 5;
+// a tap on left or right is held for the planner long enough to commit
+const LANE_HOLD = SIGNAL_LEAD + 0.2;
 
 /**
  * Stands in for a Brain: the world calls forward() every step and gets
- * pedal and steer back, only these come from the keyboard or the
- * on-screen buttons instead of a network.
+ * pedal and lane back, only these come from the keyboard or the
+ * on-screen buttons instead of a network. Like a driver-assist stalk, a
+ * tap left or right asks for the next lane over; the planner steers.
  */
 export class Pilot {
   constructor() {
     this.held = { gas: false, brake: false, left: false, right: false };
     this.touches = { gas: 0, brake: 0, left: 0, right: 0 };
     this.output = [0, 0];
+    this.lane = 0;
+    this.laneHold = 0;
   }
 
   static control(code) {
@@ -33,11 +37,19 @@ export class Pilot {
   }
 
   press(control, down) {
+    if (down && !this.held[control]) this.ask(control);
     this.held[control] = down;
   }
 
   touch(control, down) {
+    if (down) this.ask(control);
     this.touches[control] = Math.max(0, this.touches[control] + (down ? 1 : -1));
+  }
+
+  ask(control) {
+    if (control !== "left" && control !== "right") return;
+    this.lane = control === "left" ? 1 : -1;
+    this.laneHold = LANE_HOLD;
   }
 
   release() {
@@ -49,6 +61,7 @@ export class Pilot {
 
   reset() {
     this.output = [0, 0];
+    this.laneHold = 0;
   }
 
   active(control) {
@@ -57,10 +70,9 @@ export class Pilot {
 
   forward() {
     const pedalTarget = (this.active("gas") ? 1 : 0) - (this.active("brake") ? 1 : 0);
-    const steerTarget = (this.active("left") ? 1 : 0) - (this.active("right") ? 1 : 0);
-    const [pedal, steer] = this.output;
-    this.output[0] = approach(pedal, pedalTarget, PEDAL_RATE * DT);
-    this.output[1] = approach(steer, steerTarget, STEER_RATE * DT);
+    this.output[0] = approach(this.output[0], pedalTarget, PEDAL_RATE * DT);
+    this.output[1] = this.laneHold > 0 ? this.lane : 0;
+    this.laneHold = Math.max(0, this.laneHold - DT);
     return this.output;
   }
 }

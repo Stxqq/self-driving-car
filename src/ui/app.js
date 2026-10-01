@@ -1,4 +1,5 @@
 import { Brain } from "../sim/brain.js";
+import { CAR_SPEC } from "../sim/car.js";
 import { Rng } from "../sim/rng.js";
 import { Anatomy } from "../render/anatomy.js";
 import { drawChart } from "../render/chart.js";
@@ -49,6 +50,7 @@ const anatomy = new Anatomy($("#anatomy"));
 const chart = $("#chart");
 
 const counters = {
+  kmh: new Counter($("#kmh")),
   first: new Counter($("#first")),
   distance: new Counter($("#distance"), { decimals: 2 }),
   speed: new Counter($("#speed")),
@@ -233,6 +235,21 @@ function updateChart(session) {
   drawChart(chart, spec);
 }
 
+const blinkers = { "-1": $('.blinker[data-side="left"]'), 1: $('.blinker[data-side="right"]') };
+const readoutState = $("#readout-state");
+function showPlanner(driver) {
+  const { planner } = driver;
+  for (const side of [-1, 1]) blinkers[side].classList.toggle("on", driver.alive && planner.signal === side);
+  const side = planner.signal < 0 ? "left" : "right";
+  readoutState.textContent = !driver.alive
+    ? "Out"
+    : planner.changing
+      ? `Changing ${side}`
+      : planner.signal
+        ? `Signaling ${side}`
+        : "Lane keep";
+}
+
 let anatomyVisible = false;
 new IntersectionObserver(([entry]) => {
   anatomyVisible = entry.isIntersecting;
@@ -262,12 +279,14 @@ function frame(now) {
   const k = motion.matches ? 1 : easeFactor(0.085, dt);
   stage.draw(world, focus, simulated, { ghosts: mode === "train" });
   network.draw(session.network());
-  if (anatomyVisible) anatomy.update(focus, session.outputs(), k);
+  if (anatomyVisible) anatomy.update(focus, k);
+  showPlanner(focus);
   updateChart(session);
 
   counters.first.set(mode === "train" ? session.generation + 1 : session.runs);
   counters.distance.set(focus.distance / 1000);
   counters.speed.set(focus.car.speed * 3.6);
+  counters.kmh.set(focus.car.speed * 3.6);
   counters.last.set(mode === "watch" ? focus.time : mode === "train" ? world.alive : session.best / 1000);
   for (const counter of Object.values(counters)) counter.tick(k);
   stageEl.dataset.ready = "";
@@ -412,8 +431,11 @@ if (heldOut) {
   fact("survived", `${heldOut.survived} of ${runs.length} roads`);
   fact("speed", `${Math.round(runs.reduce((sum, r) => sum + r.kmh, 0) / runs.length)} km/h`);
   fact("seeds", String(runs.length));
+  fact("changes", `${heldOut.laneChangesPerKm.toFixed(1)} per km`);
 }
 fact("weights", String(pretrained.weights.length));
+fact("inputs", String(pretrained.layers[0]));
+$("#set-speed").textContent = String(Math.round(CAR_SPEC.maxSpeed * 3.6));
 
 addEventListener("hashchange", () => switchMode(location.hash.slice(1)));
 setMode(location.hash.slice(1));

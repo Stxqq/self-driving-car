@@ -1,12 +1,17 @@
 // The car in focus, redrawn nose-up at a fixed size for the spec sheet:
-// its ray fan, front wheels turned by the steer output, brake lights.
+// what its lane scan is tracking in each lane, front wheels turned by the
+// planner's steering, brake lights and indicators.
+
+import { VIEW } from "../sim/perception.js";
 
 const NS = "http://www.w3.org/2000/svg";
-// rays are drawn on a square-root scale: linear, a ray stopping at the
-// road edge five meters out would hide under the body while the long
-// ones ran off the tile
-const RAY_SCALE = 23;
+// gaps are drawn on a square-root scale: linear, a car five meters ahead
+// would hide under the body while an empty lane ran off the tile
+const GAP_SCALE = 19;
+const LANE_PITCH = 104;
 const WHEEL_TURN = 0.25;
+
+const length = (gap, range) => Math.sqrt(Math.min(Math.max(gap, 0), range)) * GAP_SCALE;
 
 export class Anatomy {
   constructor(root) {
@@ -14,45 +19,51 @@ export class Anatomy {
     this.layer = root.querySelector("[data-rays]");
     this.wheels = [...root.querySelectorAll("[data-wheel]")];
     this.brakes = root.querySelector("[data-brakes]");
-    this.rays = [];
+    this.signals = { "-1": root.querySelector('[data-signal="left"]'), 1: root.querySelector('[data-signal="right"]') };
     this.turn = 0;
-  }
-
-  build(count) {
-    this.layer.replaceChildren();
-    this.rays = Array.from({ length: count }, () => {
-      const line = document.createElementNS(NS, "line");
-      const dot = document.createElementNS(NS, "circle");
-      line.setAttribute("x1", "0");
-      line.setAttribute("y1", "0");
-      dot.setAttribute("r", "2.4");
-      this.layer.append(line, dot);
-      return { line, dot };
+    this.lanes = [-1, 0, 1].map((k) => {
+      const group = document.createElementNS(NS, "g");
+      group.setAttribute("transform", `translate(${k * LANE_PITCH} 0)`);
+      const make = (tag) => group.appendChild(document.createElementNS(NS, tag));
+      const ahead = make("line");
+      const behind = make("line");
+      const front = make("rect");
+      const back = make("rect");
+      for (const box of [front, back]) {
+        box.setAttribute("x", "-11");
+        box.setAttribute("width", "22");
+        box.setAttribute("height", "40");
+        box.setAttribute("rx", "6");
+      }
+      this.layer.append(group);
+      return { group, ahead, behind, front, back };
     });
   }
 
-  /** `ease` is the share of the way the wheels move toward the steer output this frame. */
-  update(driver, outputs, ease = 1) {
-    const { sensors } = driver;
-    if (this.rays.length !== sensors.count) this.build(sensors.count);
-    for (let r = 0; r < sensors.count; r++) {
-      const proximity = sensors.readings[r];
-      const length = Math.sqrt(sensors.ranges[r] * (1 - proximity)) * RAY_SCALE;
-      // nose up, positive angles to the car's left
-      const a = sensors.angles[r];
-      const x = (-Math.sin(a) * length).toFixed(1);
-      const y = (-Math.cos(a) * length).toFixed(1);
-      const { line, dot } = this.rays[r];
-      line.setAttribute("x2", x);
-      line.setAttribute("y2", y);
-      line.style.opacity = (0.22 + proximity * 0.6).toFixed(2);
-      dot.setAttribute("cx", x);
-      dot.setAttribute("cy", y);
-      dot.style.opacity = proximity > 0 ? "1" : "0";
-    }
-    const [pedal, steer] = outputs;
-    this.turn += ((-steer * WHEEL_TURN * 180) / Math.PI - this.turn) * ease;
+  /** `ease` is the share of the way the wheels move toward the steering this frame. */
+  update(driver, ease = 1) {
+    const { car, planner, scan } = driver;
+    scan.lanes.forEach((view, k) => {
+      const lane = this.lanes[k];
+      lane.group.style.opacity = view.exists ? "1" : "0";
+      // the own lane's lines start at the bumpers, not under the body
+      const start = k === 1 ? 98 : 0;
+      const up = start + length(view.ahead.gap, VIEW.ahead);
+      const down = start + length(view.behind.gap, VIEW.behind);
+      place(lane.ahead, -start, -up, lane.front, view.ahead.car, -up - 40);
+      place(lane.behind, start, down, lane.back, view.behind.car, down);
+    });
+    this.turn += ((-car.steer * WHEEL_TURN * 180) / Math.PI - this.turn) * ease;
     for (const wheel of this.wheels) wheel.style.transform = `rotate(${this.turn.toFixed(1)}deg)`;
-    this.brakes.style.opacity = pedal < -0.05 || !driver.alive ? "1" : "0";
+    this.brakes.style.opacity = car.brake > 0.05 || !driver.alive ? "1" : "0";
+    for (const side of [-1, 1]) this.signals[side].classList.toggle("on", driver.alive && planner.signal === side);
   }
+}
+
+function place(line, from, to, box, tracked, boxY) {
+  line.setAttribute("y1", from.toFixed(1));
+  line.setAttribute("y2", to.toFixed(1));
+  line.style.opacity = tracked ? "0.75" : "0.2";
+  box.setAttribute("y", boxY.toFixed(1));
+  box.style.opacity = tracked ? "1" : "0";
 }

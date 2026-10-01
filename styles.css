@@ -180,6 +180,46 @@ kbd {
 }
 .toast.show { opacity: 1; transform: none; }
 
+/* the cluster readout: speed big, what the car is set to below it */
+.readout {
+  position: absolute; bottom: 20px; left: 50%; z-index: 2;
+  translate: -50% 0;
+  display: grid; grid-template-columns: 22px auto 22px; align-items: center; column-gap: 10px;
+  padding: 9px 16px 10px; border-radius: 18px;
+  background: rgba(255, 255, 255, .9);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: var(--card-shadow);
+  pointer-events: none;
+}
+.readout-speed { text-align: center; line-height: 1; min-width: 64px; }
+.readout-speed b {
+  display: block; font-size: 34px; font-weight: 800; letter-spacing: -.03em;
+  font-variant-numeric: tabular-nums;
+}
+.readout-speed span { display: block; margin-top: 3px; font-size: 11px; color: var(--gray); }
+.readout-set {
+  grid-column: 1 / -1;
+  display: flex; justify-content: center; align-items: baseline; gap: 5px;
+  margin-top: 7px; padding-top: 6px; border-top: 1px solid var(--hairline);
+  font-size: 9.5px; white-space: nowrap;
+}
+.readout-set span { font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); }
+.readout-set b { font-family: var(--mono); font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.readout-set em { margin-left: 6px; font-style: normal; font-size: 10.5px; color: #2563eb; font-weight: 600; }
+.blinker { display: grid; place-items: center; }
+.blinker svg { fill: rgba(17, 17, 19, .12); transition: fill .12s linear; }
+.blinker.on svg { animation: blink .7s steps(1, end) infinite; }
+@keyframes blink {
+  0% { fill: #f59e0b; }
+  57% { fill: rgba(17, 17, 19, .12); }
+}
+.car [data-signal] { fill: #f59e0b; opacity: 0; }
+.car [data-signal].on { animation: lamp .7s steps(1, end) infinite; }
+@keyframes lamp {
+  0% { opacity: 1; }
+  57% { opacity: 0; }
+}
+
 .touch {
   position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 2;
   display: none; justify-content: space-between;
@@ -197,6 +237,8 @@ kbd {
 .touch button.down { transform: scale(.92); background: #fff; }
 @media (pointer: coarse), (max-width: 680px) {
   .stage[data-mode="drive"] .touch { display: flex; }
+  .stage[data-mode="drive"] .readout { bottom: auto; top: 16px; }
+  .stage[data-mode="drive"] .toast { top: auto; bottom: 92px; }
 }
 
 .caption { margin-top: 18px; }
@@ -245,8 +287,9 @@ kbd {
   width: 1px; height: 1px; overflow: visible;
   transition: opacity .35s var(--ease);
 }
-.rays line { stroke: var(--ink); stroke-width: 1; }
-.rays circle { fill: var(--ink); transition: opacity .2s var(--ease); }
+.rays g { transition: opacity .35s var(--ease); }
+.rays line { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 3; }
+.rays rect { fill: #fff; stroke: #2563eb; stroke-width: 1.25; transition: opacity .2s var(--ease); }
 .car {
   position: absolute; inset: 0; width: 100%; height: 100%;
   overflow: visible;
@@ -302,6 +345,7 @@ kbd {
 .anno-item:nth-child(5) * { transition-delay: .05s; }
 .anno-item:nth-child(6) * { transition-delay: .1s; }
 .anno-item:nth-child(7) * { transition-delay: .15s; }
+.anno-item:nth-child(8) * { transition-delay: .2s; }
 
 .feed-anno:is(:hover, :focus-within) .anno-hint { opacity: 0; }
 .feed-anno:is(:hover, :focus-within) .anno-dot { opacity: 1; transform: none; }
@@ -386,8 +430,8 @@ a.f-value:hover { color: var(--ink); }
 .reveals .reveal:not(.in) { opacity: 0; transform: translateY(14px); }
 
 /* nothing on the stage shows until the first frame is drawn */
-.hud, .road { transition: opacity .45s var(--ease); }
-.stage:not([data-ready]) :is(.hud, .road) { opacity: 0; }
+.hud, .road, .readout { transition: opacity .45s var(--ease); }
+.stage:not([data-ready]) :is(.hud, .road, .readout) { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0s !important; transition-delay: 0s !important; }

@@ -3,10 +3,14 @@
 // the simulation stays DOM-free and runs unchanged under Node.
 
 import { CAR_SPEC } from "../sim/car.js";
+import { smoothstep } from "../sim/geometry.js";
 
 const INK = "#111113";
 const TILE = "#f5f5f6";
 const CRASH = "#dc2626";
+const PLAN = "37,99,235";
+const SIGNAL = "#f59e0b";
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 const TRAFFIC = [
   ["#FDE68A", "rgba(120,53,15,.22)"],
   ["#BAE6FD", "rgba(12,74,110,.2)"],
@@ -38,7 +42,8 @@ export class Stage {
     this.height = 1;
     this.dpr = 1;
     this.ppm = 7;
-    this.anchorY = 0.64;
+    this.anchorY = 0.62;
+    this.labels = [];
     this.reducedMotion = false;
   }
 
@@ -50,9 +55,9 @@ export class Stage {
     this.height = height;
     this.canvas.width = Math.round(width * this.dpr);
     this.canvas.height = Math.round(height * this.dpr);
-    // roughly 88 m of road top to bottom whatever the tile size, so the
-    // forward rays (70 m) always fit above the car
-    this.ppm = Math.min(9, Math.max(4.5, height / 88));
+    // roughly 70 m of road top to bottom whatever the tile size: close
+    // enough to read the lanes, far enough to see the planned path end
+    this.ppm = Math.min(11, Math.max(5, height / 70));
   }
 
   /** Jump straight to the next target instead of easing there. */
@@ -60,11 +65,16 @@ export class Stage {
     this.camera.ready = false;
   }
 
+  // The camera looks a little down the road, more the faster the car goes,
+  // and sideways toward where the car is heading rather than where it is,
+  // so a lane change pans the view early instead of dragging it along.
   follow(world, driver, dt) {
     const cam = this.camera;
-    world.road.pose(driver.s, 0, this.pose);
-    const x = driver.car.x;
-    const y = driver.car.y;
+    const { car, planner } = driver;
+    const lookahead = Math.min(car.speed * 0.4, 10);
+    const d = driver.d * 0.5 + planner.offsetAt(world.road) * 0.5;
+    world.road.pose(driver.s + lookahead, d, this.pose);
+    const { x, y } = this.pose;
     const angle = this.pose.heading - Math.PI / 2;
     if (!cam.ready || this.reducedMotion) {
       Object.assign(cam, { x, y, angle, ready: true });
@@ -110,15 +120,150 @@ export class Stage {
     // out of the tile instead of stopping dead behind the first car
     const atStart = s - reach < 0;
     if (atStart) this.fadeToTile(reach, world.road.halfWidth + 2, 22, 0, 0);
+    this.labels.length = 0;
+    if (focus && focus.alive) {
+      this.drawTargetLane(world.road, focus);
+      this.drawPath(world.road, focus);
+    }
     this.drawSweep(world);
-    if (world.traffic) this.drawTraffic(world.traffic.within(s - reach, s + reach));
+    if (world.traffic) this.drawTraffic(world.traffic.within(s - reach, s + reach), world.time);
+    if (focus && focus.alive) this.drawTracks(focus);
     if (ghosts) this.drawGhosts(world.drivers, focus);
-    if (focus) this.drawFocus(focus);
+    if (focus) this.drawFocus(focus, world.time);
     // and the rear rays that run on past it
     if (atStart) this.fadeToTile(reach, reach, 0, -10, -reach);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawMarkers(world.road, s - reach, s + reach);
+    this.drawLabels();
+  }
+
+  pathLength(car) {
+    return Math.min(90, Math.max(24, car.speed * 3.2));
+  }
+
+  // the lane the planner is moving into, washed in from the car forward
+  drawTargetLane(road, driver) {
+    const { planner, car } = driver;
+    const lane = planner.changing ? planner.lane : planner.signal ? planner.lane + planner.signal : -1;
+    if (lane < 0) return;
+    const ctx = this.ctx;
+    const s0 = driver.s - 4;
+    const s1 = driver.s + this.pathLength(car) + 10;
+    const half = road.laneWidth / 2;
+    const center = road.laneOffset(lane);
+    const near = road.pose(s0, center, {});
+    const far = road.pose(s1, center, {});
+    const wash = ctx.createLinearGradient(near.x, near.y, far.x, far.y);
+    wash.addColorStop(0, `rgba(${PLAN},0)`);
+    wash.addColorStop(0.15, `rgba(${PLAN},.09)`);
+    wash.addColorStop(1, `rgba(${PLAN},0)`);
+    ctx.beginPath();
+    for (let u = s0; u <= s1; u += 2) {
+      const p = road.pose(u, center + half, this.pose);
+      ctx.lineTo(p.x, p.y);
+    }
+    for (let u = s1; u >= s0; u -= 2) {
+      const p = road.pose(u, center - half, this.pose);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = wash;
+    ctx.fill();
+  }
+
+  // The planned path: from where the car is now onto the planner's line,
+  // which bends into the next lane during a change. It fades with distance.
+  drawPath(road, driver) {
+    const { car, planner } = driver;
+    const ctx = this.ctx;
+    const length = this.pathLength(car);
+    const v = Math.max(car.speed, 4);
+    const half = CAR_WIDTH * 0.42;
+    const left = [];
+    const right = [];
+    const middle = [];
+    for (let u = 0; u <= length; u += 1.5) {
+      const settle = smoothstep(Math.min(1, u / 14));
+      const d = driver.d + (planner.offsetAt(road, u / v) - driver.d) * settle;
+      const p = road.pose(driver.s + u, d + half, this.pose);
+      left.push(p.x, p.y);
+      const q = road.pose(driver.s + u, d - half, this.pose);
+      right.push(q.x, q.y);
+      middle.push((p.x + q.x) / 2, (p.y + q.y) / 2);
+    }
+    const n = middle.length;
+    const fade = ctx.createLinearGradient(middle[0], middle[1], middle[n - 2], middle[n - 1]);
+    fade.addColorStop(0, `rgba(${PLAN},.22)`);
+    fade.addColorStop(0.6, `rgba(${PLAN},.12)`);
+    fade.addColorStop(1, `rgba(${PLAN},0)`);
+    ctx.beginPath();
+    for (let i = 0; i < n; i += 2) ctx.lineTo(left[i], left[i + 1]);
+    for (let i = n - 2; i >= 0; i -= 2) ctx.lineTo(right[i], right[i + 1]);
+    ctx.closePath();
+    ctx.fillStyle = fade;
+    ctx.fill();
+
+    const line = ctx.createLinearGradient(middle[0], middle[1], middle[n - 2], middle[n - 1]);
+    line.addColorStop(0, `rgba(${PLAN},.85)`);
+    line.addColorStop(1, `rgba(${PLAN},0)`);
+    ctx.beginPath();
+    for (let i = 0; i < n; i += 2) ctx.lineTo(middle[i], middle[i + 1]);
+    ctx.lineWidth = this.px(1.5);
+    ctx.strokeStyle = line;
+    ctx.stroke();
+  }
+
+  // Corner brackets around every car the lane scan is tracking, the one
+  // the car is following in blue, with the gap to it in meters.
+  drawTracks(driver) {
+    const ctx = this.ctx;
+    const own = driver.scan.lanes[1].ahead.car;
+    ctx.lineWidth = this.px(1.25);
+    for (const view of driver.scan.lanes) {
+      for (const track of [view.ahead, view.behind]) {
+        const car = track.car;
+        if (!car) continue;
+        const lead = car === own;
+        ctx.strokeStyle = lead ? `rgb(${PLAN})` : "rgba(17,17,19,.38)";
+        this.brackets(car.x, car.y, car.heading);
+        if (lead || track.gap < 25) {
+          this.labels.push(car.x, car.y, Math.max(0, Math.round(track.gap)), lead);
+        }
+      }
+    }
+  }
+
+  brackets(x, y, heading) {
+    const ctx = this.ctx;
+    const hl = CAR_LENGTH / 2 + 0.6;
+    const hw = CAR_WIDTH / 2 + 0.5;
+    const arm = 0.9;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(heading);
+    ctx.beginPath();
+    for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      ctx.moveTo(sx * hl - sx * arm, sy * hw);
+      ctx.lineTo(sx * hl, sy * hw);
+      ctx.lineTo(sx * hl, sy * hw - sy * arm);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawLabels() {
+    const { ctx, point, labels } = this;
+    if (!labels.length) return;
+    ctx.font = `500 9px ${MONO}`;
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    const offset = (CAR_WIDTH / 2 + 1.2) * this.ppm;
+    for (let i = 0; i < labels.length; i += 4) {
+      this.toScreen(labels[i], labels[i + 1], point);
+      ctx.fillStyle = labels[i + 3] ? `rgb(${PLAN})` : "rgba(17,17,19,.5)";
+      ctx.fillText(`${labels[i + 2]} m`, point.x + offset, point.y);
+    }
   }
 
   px(n) {
@@ -250,7 +395,7 @@ export class Stage {
     ctx.setLineDash([]);
   }
 
-  drawTraffic(view) {
+  drawTraffic(view, time) {
     const ctx = this.ctx;
     const down = this.shadowOffset(0.45);
     ctx.fillStyle = "rgba(17,17,19,.06)";
@@ -266,6 +411,16 @@ export class Stage {
       ctx.fillStyle = glass;
       this.glass(car.x, car.y, car.heading);
     }
+    // traffic never looks for the learning cars, but it does indicate
+    if ((time + 0.05) % 0.7 >= 0.4) return;
+    ctx.fillStyle = SIGNAL;
+    for (let k = view.start; k < view.end; k++) {
+      const car = view.cars[k];
+      if (!car.changingLanes) continue;
+      const side = car.targetLane < car.lane ? 1 : -1;
+      this.lamps(car, 1, side);
+      this.lamps(car, -1, side);
+    }
   }
 
   drawGhosts(drivers, focus) {
@@ -277,31 +432,9 @@ export class Stage {
     }
   }
 
-  drawFocus(driver) {
+  drawFocus(driver, time) {
     const { ctx, dpr } = this;
-    const { car, sensors } = driver;
-    const [ox, oy] = sensors.origin;
-
-    ctx.lineWidth = this.px(1);
-    for (let r = 0; r < sensors.count; r++) {
-      const proximity = sensors.readings[r];
-      ctx.strokeStyle = `rgba(17,17,19,${0.14 + proximity * 0.5})`;
-      ctx.beginPath();
-      ctx.moveTo(ox, oy);
-      ctx.lineTo(sensors.ends[2 * r], sensors.ends[2 * r + 1]);
-      ctx.stroke();
-    }
-    ctx.fillStyle = INK;
-    ctx.beginPath();
-    const dot = this.px(2.2);
-    for (let r = 0; r < sensors.count; r++) {
-      if (sensors.readings[r] <= 0) continue;
-      const x = sensors.ends[2 * r];
-      const y = sensors.ends[2 * r + 1];
-      ctx.moveTo(x + dot, y);
-      ctx.arc(x, y, dot, 0, Math.PI * 2);
-    }
-    ctx.fill();
+    const { car, planner } = driver;
 
     // shadow offsets are in device pixels and ignore the transform
     ctx.shadowColor = "rgba(0,0,0,.28)";
@@ -312,6 +445,39 @@ export class Stage {
     ctx.shadowColor = "transparent";
     ctx.fillStyle = "rgba(255,255,255,.22)";
     this.glass(car.x, car.y, car.heading);
+
+    if (!driver.alive) return;
+    if (car.brake > 0.05) {
+      ctx.fillStyle = CRASH;
+      this.lamps(car, -1, 1);
+      this.lamps(car, -1, -1);
+    }
+    // on for 0.4 s, off for 0.3, like a real relay; sim time, so it blinks
+    // faster when the sim does
+    if (planner.signal !== 0 && (time + 0.05) % 0.7 < 0.4) {
+      const side = -planner.signal;
+      ctx.shadowColor = SIGNAL;
+      ctx.shadowBlur = 10 * dpr;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = SIGNAL;
+      this.lamps(car, 1, side);
+      this.lamps(car, -1, side);
+      ctx.shadowColor = "transparent";
+    }
+  }
+
+  // a lamp at one corner: `end` 1 front, -1 rear; `side` 1 left, -1 right
+  lamps(car, end, side) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.rotate(car.heading);
+    ctx.beginPath();
+    const x = end > 0 ? CAR_LENGTH / 2 - 0.42 : -CAR_LENGTH / 2;
+    const y = side > 0 ? CAR_WIDTH / 2 - 0.55 : -CAR_WIDTH / 2;
+    ctx.roundRect(x, y, 0.42, 0.55, 0.12);
+    ctx.fill();
+    ctx.restore();
   }
 
   shadowOffset(meters) {
