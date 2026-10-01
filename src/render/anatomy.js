@@ -15,6 +15,7 @@ export class Anatomy {
     this.wheels = [...root.querySelectorAll("[data-wheel]")];
     this.brakes = root.querySelector("[data-brakes]");
     this.rays = [];
+    this.turn = 0;
   }
 
   build(count) {
@@ -30,7 +31,8 @@ export class Anatomy {
     });
   }
 
-  update(driver, outputs) {
+  /** `ease` is the share of the way the wheels move toward the steer output this frame. */
+  update(driver, outputs, ease = 1) {
     const { sensors } = driver;
     if (this.rays.length !== sensors.count) this.build(sensors.count);
     for (let r = 0; r < sensors.count; r++) {
@@ -49,8 +51,8 @@ export class Anatomy {
       dot.style.opacity = proximity > 0 ? "1" : "0";
     }
     const [pedal, steer] = outputs;
-    const turn = (-steer * WHEEL_TURN * 180) / Math.PI;
-    for (const wheel of this.wheels) wheel.style.transform = `rotate(${turn.toFixed(1)}deg)`;
+    this.turn += ((-steer * WHEEL_TURN * 180) / Math.PI - this.turn) * ease;
+    for (const wheel of this.wheels) wheel.style.transform = `rotate(${this.turn.toFixed(1)}deg)`;
     this.brakes.style.opacity = pedal < -0.05 || !driver.alive ? "1" : "0";
   }
 }
