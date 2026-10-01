@@ -18,7 +18,7 @@ const DEFAULTS = {
 /**
  * A procedurally generated highway, sampled every `spacing` meters along
  * its centerline. Curvature ramps linearly between sections (clothoids),
- * so heading is smooth and there are no kinks for the sensors to trip on.
+ * so heading is smooth and there are no kinks for the steering to trip on.
  * The road is generated lazily: call extendTo(s) before looking past `length`.
  */
 export class Road {
@@ -120,6 +120,17 @@ export class Road {
     const from = clamp(Math.floor(s0 / this.spacing), 0, this.count - 1);
     const to = clamp(Math.ceil(s1 / this.spacing) + 1, 0, this.count);
     return [from, to];
+  }
+
+  /** Largest curvature (1/m, either direction) between arc lengths s0 and s1. */
+  sharpest(s0, s1) {
+    const [from, to] = this.span(s0, s1);
+    let peak = 0;
+    for (let i = from + 1; i < to; i++) {
+      const k = Math.abs(this.headings[i] - this.headings[i - 1]);
+      if (k > peak) peak = k;
+    }
+    return peak / this.spacing;
   }
 
   /** World pose at arc length s and lateral offset d (left positive). */
