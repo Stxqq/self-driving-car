@@ -2,7 +2,7 @@ import { Car, CAR_SPEC } from "./car.js";
 import { Road } from "./road.js";
 import { RayFan } from "./sensors.js";
 import { Traffic } from "./traffic.js";
-import { polygonsOverlap, polygonTouchesPolyline, wrapAngle } from "./geometry.js";
+import { clamp, polygonsOverlap, polygonTouchesPolyline, wrapAngle } from "./geometry.js";
 
 export const DT = 1 / 60;
 
@@ -33,9 +33,9 @@ const HEADING_SCALE = 0.5;
 const START_S = 12;
 
 const RULES = {
-  // the sweeper: a line moving up the road at 18 km/h; anyone behind it
-  // is out. Because it depends only on time, traffic can be
-  // spawned and cleaned up without ever looking at the learning cars.
+  // the sweeper: a line moving up the road at 18 km/h, anyone behind it is
+  // out. It depends only on time, so traffic can be spawned and cleaned up
+  // without ever looking at the learning cars.
   sweepGrace: 8,
   sweepPace: 5,
   // and a car that hasn't gained a meter in this long has given up
@@ -78,7 +78,7 @@ export class World {
     this.time = 0;
     this.steps = 0;
     this.road = new Road(seed, { lanes });
-    this.traffic = traffic ? new Traffic(this.road, seed, { density }) : null;
+    this.traffic = traffic && density > 0 ? new Traffic(this.road, seed, { density }) : null;
     this.projection = { s: 0, d: 0, index: 0 };
     this.pose = { x: 0, y: 0, heading: 0 };
     this.road.extendTo(this.horizon() + 200);
@@ -127,13 +127,13 @@ export class World {
       const closing = ((readings[r] - driver.previous[r]) * sensors.ranges[r]) / DT / CLOSING_SCALE;
       inputs[r] = readings[r];
       // a ray that swaps targets jumps; the clamp keeps that from shouting
-      inputs[n + r] = closing < -1 ? -1 : closing > 1 ? 1 : closing;
+      inputs[n + r] = clamp(closing, -1, 1);
       driver.previous[r] = readings[r];
     }
     road.pose(driver.s, 0, this.pose);
     const headingError = wrapAngle(car.heading - this.pose.heading) / HEADING_SCALE;
     inputs[2 * n] = driver.d / road.halfWidth;
-    inputs[2 * n + 1] = headingError < -1 ? -1 : headingError > 1 ? 1 : headingError;
+    inputs[2 * n + 1] = clamp(headingError, -1, 1);
     inputs[2 * n + 2] = car.speed / car.spec.maxSpeed;
     inputs[2 * n + 3] = car.turning;
     const [pedal, steer] = driver.brain.forward(inputs);

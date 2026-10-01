@@ -26,7 +26,7 @@ export const CAR_SPEC = Object.freeze({
  * wheel angle. At 30 m/s the tires give out past about 1.5 degrees of
  * lock, so a raw angle would leave the network a sliver of its output
  * range to drive with on the highway; this way the same output means the
- * same sideways pull at any speed, the way steer-by-wire systems scale it.
+ * same sideways pull at any speed.
  */
 export class Car {
   constructor(x, y, heading, speed = 0, spec = CAR_SPEC) {
