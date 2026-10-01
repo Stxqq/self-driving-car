@@ -62,6 +62,16 @@ export class Driver {
     this.time = 0;
   }
 
+  get speed() {
+    return this.car.speed;
+  }
+
+  /** The lanes traffic should treat as taken: its own, and the next one while it blinks or moves over. */
+  occupies(lane) {
+    const p = this.planner;
+    return lane === p.lane || (p.changing && lane === p.from) || (p.signal !== 0 && lane === p.lane + p.signal);
+  }
+
   /** Meters of road covered, measured along the centerline. */
   get distance() {
     return this.best - this.start;
@@ -115,7 +125,7 @@ export class World {
   step() {
     const road = this.road;
     road.extendTo(this.horizon() + 200);
-    if (this.traffic) this.traffic.step(DT, this.sweepLine() - 120, this.horizon());
+    if (this.traffic) this.traffic.step(DT, this.sweepLine() - 120, this.horizon(), this.drivers);
 
     for (const driver of this.drivers) {
       if (driver.alive) this.drive(driver);

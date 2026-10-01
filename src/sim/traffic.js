@@ -57,10 +57,11 @@ class TrafficCar {
 
 /**
  * Background traffic, simulated in road coordinates (arc length, lateral
- * offset). It never reacts to the learning cars: the caller passes a spawn
- * horizon and a cleanup line that depend only on time, so a seed always
- * produces the same traffic no matter how many cars are learning or how
- * they drive.
+ * offset). It drives like people do around the learning cars too: keeps its
+ * distance behind one, waits or overtakes it on the left, and doesn't
+ * change lanes into one. Spawning and cleanup depend only on time, so a
+ * seed with the same learning cars driving the same way always gives the
+ * same traffic.
  */
 export class Traffic {
   constructor(road, seed, options = {}) {
@@ -73,10 +74,16 @@ export class Traffic {
     this.time = 0;
     this.view = { cars: this.cars, start: 0, end: 0 };
     this.pose = { x: 0, y: 0, heading: 0 };
+    this.others = [];
   }
 
-  /** Advances traffic by dt, spawning cars up to `horizon` and dropping those behind `cleanup`. */
-  step(dt, cleanup, horizon) {
+  /**
+   * Advances traffic by dt, spawning cars up to `horizon` and dropping those
+   * behind `cleanup`. `others` are the learning cars: anything with `s`,
+   * `speed`, `alive` and `occupies(lane)`.
+   */
+  step(dt, cleanup, horizon, others = []) {
+    this.others = others;
     const cars = this.cars;
     for (let i = 0; i < cars.length; i++) {
       const car = cars[i];
@@ -124,10 +131,18 @@ export class Traffic {
 
   leaderIn(lane, i, s, maxGap) {
     const cars = this.cars;
+    let leader = null;
     for (let j = i + 1; j < cars.length && cars[j].s - s < maxGap; j++) {
-      if (cars[j].occupies(lane)) return cars[j];
+      if (cars[j].occupies(lane)) {
+        leader = cars[j];
+        break;
+      }
     }
-    return null;
+    for (const other of this.others) {
+      if (!other.alive || other.s <= s || other.s - s >= maxGap || !other.occupies(lane)) continue;
+      if (!leader || other.s < leader.s) leader = other;
+    }
+    return leader;
   }
 
   followAccel(car, i) {
@@ -186,6 +201,13 @@ export class Traffic {
   laneIsClear(lane, car) {
     for (const other of this.cars) {
       if (other === car || !other.occupies(lane)) continue;
+      const ahead = other.s - car.s;
+      const needAhead = 12 + Math.max(0, car.speed - other.speed) * 3;
+      const needBehind = 10 + Math.max(0, other.speed - car.speed) * 3;
+      if (ahead < needAhead && ahead > -needBehind) return false;
+    }
+    for (const other of this.others) {
+      if (!other.alive || !other.occupies(lane)) continue;
       const ahead = other.s - car.s;
       const needAhead = 12 + Math.max(0, car.speed - other.speed) * 3;
       const needBehind = 10 + Math.max(0, other.speed - car.speed) * 3;
