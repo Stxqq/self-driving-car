@@ -109,13 +109,13 @@ export class Stage {
     // the road starts at s = 0, heading north from the origin; let it come
     // out of the tile instead of stopping dead behind the first car
     const atStart = s - reach < 0;
-    if (atStart) this.fadeToTile(world.road, reach, 22, 0, 0);
+    if (atStart) this.fadeToTile(reach, world.road.halfWidth + 2, 22, 0, 0);
     this.drawSweep(world);
     if (world.traffic) this.drawTraffic(world.traffic.within(s - reach, s + reach));
     if (ghosts) this.drawGhosts(world.drivers, focus);
     if (focus) this.drawFocus(focus);
-    // and the rear ray that runs on past it
-    if (atStart) this.fadeToTile(world.road, reach, 0, -10, -reach);
+    // and the rear rays that run on past it
+    if (atStart) this.fadeToTile(reach, reach, 0, -10, -reach);
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawMarkers(world.road, s - reach, s + reach);
@@ -140,11 +140,11 @@ export class Stage {
     ctx.fill();
   }
 
-  // Washes the road strip between `clear` and `solid` (world y) into the
-  // tile, and on to `far`; the ground dots come back in as it fades.
-  fadeToTile(road, reach, clear, solid, far) {
+  // Washes a band `w` either side of x = 0 into the tile between `clear` and
+  // `solid` (world y), and on to `far`; the ground dots come back in as it
+  // fades.
+  fadeToTile(reach, w, clear, solid, far) {
     const ctx = this.ctx;
-    const w = road.halfWidth + 2;
     const band = (from, to) => {
       const g = ctx.createLinearGradient(0, clear, 0, solid);
       g.addColorStop(0, from);
