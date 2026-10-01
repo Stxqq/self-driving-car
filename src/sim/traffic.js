@@ -6,6 +6,8 @@ const DEFAULTS = {
   firstSpawn: 70,
   minSpacing: 16,
   maxSpacing: 50,
+  // scales how many cars spawn; training starts on emptier roads
+  density: 1,
   // desired speeds by lane: the leftmost lane cruises in the top band,
   // each lane to the right one band lower
   topSpeed: 24,
@@ -198,7 +200,7 @@ export class Traffic {
     const road = this.road;
     while (this.nextSpawn < horizon) {
       const s = this.nextSpawn;
-      this.nextSpawn += rng.range(this.minSpacing, this.maxSpacing);
+      this.nextSpawn += rng.range(this.minSpacing, this.maxSpacing) / this.density;
       const pick = rng.next();
       const jitter = rng.next();
 

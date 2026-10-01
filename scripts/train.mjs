@@ -3,8 +3,12 @@
 // of the field is re-checked on fixed validation seeds and the best of
 // those is written to disk.
 //
-//   node scripts/train.mjs --generations 200 --population 140
-//   node scripts/train.mjs --resume            # continue from the saved brain
+//   node scripts/train.mjs                       # from scratch
+//   node scripts/train.mjs --resume --density 0.5
+//
+// --density scales the traffic (validation uses the same density), so a
+// driver can learn speed on an empty road first and traffic after; see
+// scripts/curriculum.sh for the schedule the shipped brain came from.
 
 import { availableParallelism } from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
@@ -18,10 +22,11 @@ import { DEFAULT_LAYERS } from "../src/sim/world.js";
 
 const { values: args } = parseArgs({
   options: {
-    generations: { type: "string", default: "200" },
-    population: { type: "string", default: "140" },
-    seeds: { type: "string", default: "3" },
-    seconds: { type: "string", default: "75" },
+    generations: { type: "string", default: "300" },
+    population: { type: "string", default: "200" },
+    seeds: { type: "string", default: "4" },
+    seconds: { type: "string", default: "150" },
+    density: { type: "string", default: "1" },
     workers: { type: "string", default: String(Math.max(1, availableParallelism() - 1)) },
     seed: { type: "string", default: "1" },
     resume: { type: "boolean", default: false },
@@ -32,6 +37,7 @@ const { values: args } = parseArgs({
 const GENERATIONS = Number(args.generations);
 const SEEDS_PER_GEN = Number(args.seeds);
 const SECONDS = Number(args.seconds);
+const DENSITY = Number(args.density);
 const VALIDATION_SEEDS = [5001, 5002, 5003, 5004];
 const VALIDATION_SECONDS = 120;
 const VALIDATE_EVERY = 5;
@@ -78,14 +84,14 @@ class EpisodePool {
   }
 
   /** Drives brains on each seed; returns outcomes[brain][seed]. */
-  async drive(brains, seeds, seconds) {
+  async drive(brains, seeds, seconds, density = 1) {
     // about two jobs per worker keeps them all busy without much overhead
     const chunk = Math.ceil(brains.length / Math.ceil((this.size * 2) / seeds.length));
     const jobs = [];
     for (const [k, seed] of seeds.entries()) {
       for (let start = 0; start < brains.length; start += chunk) {
         const part = brains.slice(start, start + chunk);
-        const job = this.run({ layers: part[0].layers, genomes: part.map((b) => b.weights), seed, seconds });
+        const job = this.run({ layers: part[0].layers, genomes: part.map((b) => b.weights), seed, seconds, density });
         jobs.push(job.then((outcomes) => ({ k, start, outcomes })));
       }
     }
@@ -127,19 +133,19 @@ const pool = new EpisodePool(Number(args.workers));
 
 let record = -Infinity;
 if (ancestor) {
-  const [scores] = await pool.drive([ancestor], VALIDATION_SEEDS, VALIDATION_SECONDS);
+  const [scores] = await pool.drive([ancestor], VALIDATION_SEEDS, VALIDATION_SECONDS, DENSITY);
   record = mean(scores.map((o) => o.distance));
   console.log(`resuming from ${args.out}: ${record.toFixed(0)} m on validation`);
 }
 
-console.log(`${pool.size} workers, population ${evolution.size}, ${SEEDS_PER_GEN} seeds x ${SECONDS} s`);
+console.log(`${pool.size} workers, population ${evolution.size}, ${SEEDS_PER_GEN} seeds x ${SECONDS} s, traffic x${DENSITY}`);
 console.log(" gen   best m   mean m  alive    mut     s");
 
 const started = performance.now();
 for (let g = 0; g < GENERATIONS; g++) {
   const t0 = performance.now();
   const seeds = Array.from({ length: SEEDS_PER_GEN }, (_, j) => 100000 * Number(args.seed) + evolution.generation * SEEDS_PER_GEN + j);
-  const table = await pool.drive(evolution.population, seeds, SECONDS);
+  const table = await pool.drive(evolution.population, seeds, SECONDS, DENSITY);
 
   const scores = table.map((runs) => mean(runs.map(fitness)));
   const distances = table.map((runs) => mean(runs.map((o) => o.distance)));
@@ -158,7 +164,7 @@ for (let g = 0; g < GENERATIONS; g++) {
 
   if ((g + 1) % VALIDATE_EVERY === 0 || g === GENERATIONS - 1) {
     const top = ranked.slice(0, VALIDATE_TOP).map((r) => r.brain);
-    const results = await pool.drive(top, VALIDATION_SEEDS, VALIDATION_SECONDS);
+    const results = await pool.drive(top, VALIDATION_SEEDS, VALIDATION_SECONDS, DENSITY);
     const valid = results.map((runs) => mean(runs.map((o) => o.distance)));
     const i = valid.indexOf(Math.max(...valid));
     if (valid[i] > record) {
