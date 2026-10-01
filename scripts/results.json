@@ -1,0 +1,51 @@
+{
+  "brain": "src/brains/pretrained.json",
+  "layers": [
+    32,
+    20,
+    10,
+    2
+  ],
+  "limits": {
+    "seconds": 300,
+    "meters": 6000
+  },
+  "meanMeters": 4010,
+  "runs": [
+    {
+      "seed": 9001,
+      "meters": 4554,
+      "seconds": 300,
+      "kmh": 54.6,
+      "ended": "time"
+    },
+    {
+      "seed": 9002,
+      "meters": 1679,
+      "seconds": 109.7,
+      "kmh": 55.1,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9003,
+      "meters": 4532,
+      "seconds": 300,
+      "kmh": 54.4,
+      "ended": "time"
+    },
+    {
+      "seed": 9004,
+      "meters": 4543,
+      "seconds": 300,
+      "kmh": 54.5,
+      "ended": "time"
+    },
+    {
+      "seed": 9005,
+      "meters": 4741,
+      "seconds": 300,
+      "kmh": 56.9,
+      "ended": "time"
+    }
+  ]
+}
