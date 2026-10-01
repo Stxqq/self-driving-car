@@ -4,10 +4,12 @@ import { CAR_SPEC } from "./car.js";
 
 const DEFAULTS = {
   firstSpawn: 70,
-  minSpacing: 14,
-  maxSpacing: 44,
-  minSpeed: 9,
-  maxSpeed: 19,
+  minSpacing: 16,
+  maxSpacing: 50,
+  // desired speeds by lane: the leftmost lane cruises in the top band,
+  // each lane to the right one band lower
+  topSpeed: 24,
+  speedBand: 5,
   laneChangeTime: 3.2,
   // intelligent driver model
   comfortAccel: 1.4,
@@ -133,20 +135,29 @@ export class Traffic {
     return Math.max(accel, -9);
   }
 
+  /** Speeds a car spawned in `lane` wants to drive. */
+  laneBand(lane) {
+    const top = this.topSpeed - lane * this.speedBand;
+    return [top - this.speedBand, top];
+  }
+
+  // Overtake on the left when stuck behind someone slower, if quick enough
+  // for that lane; drift back to the right once it is clear. Nobody changes
+  // lanes for no reason, which keeps the fast lane fast.
   think(car, i) {
     const rng = this.rng;
-    car.nextThink = this.time + rng.range(2, 7);
+    car.nextThink = this.time + rng.range(1.5, 5);
     if (car.changingLanes) return;
 
     const leader = this.leaderIn(car.lane, i, car.s, 60);
     const blocked = leader && leader.speed < car.desiredSpeed - 1.5;
-    if (!blocked && !rng.chance(0.05)) return;
-
-    const options = [];
-    if (car.lane > 0) options.push(car.lane - 1);
-    if (car.lane < this.road.lanes - 1) options.push(car.lane + 1);
-    const lane = options[rng.int(options.length)];
-    if (this.laneIsClear(lane, car)) {
+    let lane = car.lane;
+    if (blocked && car.lane > 0 && car.desiredSpeed > this.laneBand(car.lane - 1)[0] - 1) {
+      lane = car.lane - 1;
+    } else if (!blocked && car.lane < this.road.lanes - 1 && car.desiredSpeed <= this.laneBand(car.lane + 1)[1] + 1) {
+      lane = car.lane + 1;
+    }
+    if (lane !== car.lane && this.laneIsClear(lane, car)) {
       car.targetLane = lane;
       car.changeProgress = 0;
     }
@@ -188,8 +199,8 @@ export class Traffic {
     while (this.nextSpawn < horizon) {
       const s = this.nextSpawn;
       this.nextSpawn += rng.range(this.minSpacing, this.maxSpacing);
-      const desired = rng.range(this.minSpeed, this.maxSpeed);
       const pick = rng.next();
+      const jitter = rng.next();
 
       const free = [];
       for (let lane = 0; lane < road.lanes; lane++) {
@@ -198,6 +209,8 @@ export class Traffic {
       // keep at least one lane open at every spawn point
       if (free.length < 2) continue;
       const lane = free[Math.floor(pick * free.length)];
+      const [slow, fast] = this.laneBand(lane);
+      const desired = slow + (fast - slow) * jitter;
 
       let speed = desired;
       const at = this.lowerBound(s);
