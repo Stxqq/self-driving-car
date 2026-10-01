@@ -13,7 +13,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/",
+    "test": "node --test test/*.test.mjs",
     "train": "node scripts/train.mjs",
     "evaluate": "node scripts/evaluate.mjs",
     "serve": "python3 -m http.server 5101"
