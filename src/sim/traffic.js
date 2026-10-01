@@ -30,6 +30,7 @@ class TrafficCar {
     this.d = 0;
     this.lateralSpeed = 0;
     this.speed = speed;
+    this.accel = 0;
     this.desiredSpeed = desiredSpeed;
     this.nextThink = nextThink;
     this.x = 0;
