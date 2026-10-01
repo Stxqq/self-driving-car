@@ -16,16 +16,19 @@ export function fanAngles(count, spread) {
 }
 
 /**
- * A fan of range finders mounted at the front bumper. Readings are
- * proximities in [0, 1]: 0 means nothing within range, 1 means touching.
+ * Range finders on the roof: a fan looking ahead plus a few mirror rays
+ * looking back, without which a car can't tell whether the next lane is
+ * clear before it moves over. Readings are proximities in [0, 1]:
+ * 0 means nothing within range, 1 means touching.
  */
 export class RayFan {
-  constructor({ count = 11, spread = Math.PI * 0.9, range = 70 } = {}) {
-    this.angles = fanAngles(count, spread);
-    this.range = range;
-    this.readings = new Float64Array(count);
-    // ray endpoints in world space, kept for drawing
-    this.ends = new Float64Array(count * 2);
+  constructor({ count = 11, spread = Math.PI * 0.9, range = 70, mirrors = [], mirrorRange = 40 } = {}) {
+    this.angles = [...fanAngles(count, spread), ...mirrors];
+    this.ranges = this.angles.map((_, i) => (i < count ? range : mirrorRange));
+    this.readings = new Float64Array(this.angles.length);
+    // ray origin and endpoints in world space, kept for drawing
+    this.origin = new Float64Array(2);
+    this.ends = new Float64Array(this.angles.length * 2);
     this.visible = [];
   }
 
@@ -38,10 +41,11 @@ export class RayFan {
    * `s` and against traffic cars whose arc length is within range.
    */
   sense(car, road, s, traffic) {
-    const range = this.range;
-    const forward = car.spec.length / 2;
-    const ox = car.x + Math.cos(car.heading) * forward;
-    const oy = car.y + Math.sin(car.heading) * forward;
+    const range = Math.max(...this.ranges);
+    const ox = car.x;
+    const oy = car.y;
+    this.origin[0] = ox;
+    this.origin[1] = oy;
     // chords are shorter than arcs on a curve, so look a bit past the range
     const reach = range * 1.15 + road.halfWidth;
     const [from, to] = road.span(s - reach, s + reach);
@@ -58,8 +62,8 @@ export class RayFan {
 
     for (let r = 0; r < this.angles.length; r++) {
       const a = car.heading + this.angles[r];
-      const ex = ox + Math.cos(a) * range;
-      const ey = oy + Math.sin(a) * range;
+      const ex = ox + Math.cos(a) * this.ranges[r];
+      const ey = oy + Math.sin(a) * this.ranges[r];
       let hit = rayPolylineHit(ox, oy, ex, ey, road.left, from, to);
       const right = rayPolylineHit(ox, oy, ex, ey, road.right, from, to);
       if (right >= 0 && (hit < 0 || right < hit)) hit = right;
