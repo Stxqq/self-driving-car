@@ -5,7 +5,6 @@ import {
   pointInPolygon,
   polygonsOverlap,
   polygonTouchesPolyline,
-  rayPolygonHit,
   segmentHit,
   wrapAngle,
 } from "../src/sim/geometry.js";
@@ -21,13 +20,6 @@ test("disjoint, parallel and too-short segments do not hit", () => {
   assert.equal(segmentHit(0, 0, 1, 0, 2, -1, 2, 1), -1);
   assert.equal(segmentHit(0, 0, 4, 0, 0, 1, 4, 1), -1);
   assert.equal(segmentHit(0, 0, 4, 0, 1, 0.5, 1, 3), -1);
-});
-
-test("a ray stops at the nearest polygon edge", () => {
-  assert.equal(rayPolygonHit(-2, 1, 8, 1, square), 0.2);
-  assert.equal(rayPolygonHit(-2, 5, 8, 5, square), -1);
-  // from inside it hits the far wall
-  assert.equal(rayPolygonHit(1, 1, 1, 11, square), 0.1);
 });
 
 test("point in polygon", () => {

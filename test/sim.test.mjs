@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Brain } from "../src/sim/brain.js";
-import { Car } from "../src/sim/car.js";
+import { CAR_SPEC, Car } from "../src/sim/car.js";
 import { Road } from "../src/sim/road.js";
 import { Rng } from "../src/sim/rng.js";
 import { DEFAULT_LAYERS, DT, World, runEpisode } from "../src/sim/world.js";
@@ -112,9 +112,26 @@ test("a car that never moves is swept up as stalled", () => {
   assert.equal(o.distance, 0);
 });
 
-test("a car that steers hard left hits the border", () => {
-  const reckless = { forward: () => [1, 1] };
-  const [o] = runEpisode([reckless], { seed: 1, seconds: 30 });
-  assert.ok(o.crashed);
-  assert.ok(o.time < 5);
+test("a car that always asks for the left lane ends up there, centered", () => {
+  const world = new World({ seed: 1, brains: [{ forward: () => [0.6, 1] }], traffic: false });
+  for (let i = 0; i < 60 * 20; i++) world.step();
+  const driver = world.drivers[0];
+  assert.ok(driver.alive);
+  assert.equal(driver.planner.lane, 0);
+  assert.ok(Math.abs(driver.d - world.road.laneOffset(0)) < 0.3, `offset ${driver.d}`);
+});
+
+test("below the grip limit, the planner keeps a car within half a meter of its lane center", () => {
+  // 90 km/h; the tightest bends are about 110 m, which needs 5.7 m/s^2 of the 8 there are
+  const cruise = { forward: (inputs) => [(25 - inputs[15] * CAR_SPEC.maxSpeed) / 2, 0] };
+  for (const seed of [1, 2, 3, 4]) {
+    const world = new World({ seed, brains: [cruise], traffic: false });
+    let worst = 0;
+    for (let i = 0; i < 60 * 60; i++) {
+      world.step();
+      worst = Math.max(worst, Math.abs(world.drivers[0].d - world.road.laneOffset(1)));
+    }
+    assert.ok(world.drivers[0].alive);
+    assert.ok(worst < 0.5, `seed ${seed} drifted ${worst.toFixed(2)} m off center`);
+  }
 });
