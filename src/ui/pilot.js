@@ -1,4 +1,5 @@
 import { SIGNAL_LEAD } from "../sim/planner.js";
+import { CAR_SPEC } from "../sim/car.js";
 import { DT } from "../sim/world.js";
 
 const KEYS = {
@@ -12,16 +13,27 @@ const KEYS = {
   KeyD: "right",
 };
 
-// how fast the pedal follows the keys, per second
-const PEDAL_RATE = 5;
+// how fast the pedal moves, per second: a foot, not a switch
+const PEDAL_RATE = 1.6;
+const BRAKE_RATE = 1.2;
+const KMH = 1 / 3.6;
+const START_SET = 70 * KMH;
+// holding up raises the set speed this much per second
+const SET_RATE = 15 * KMH;
+// cruise control: pedal per m/s of error, and how far it may push either way
+const CRUISE_GAIN = 0.3;
+const CRUISE_THROTTLE = 0.6;
+const CRUISE_BRAKE = 0.25;
 // a tap on left or right is held for the planner long enough to commit
 const LANE_HOLD = SIGNAL_LEAD + 0.2;
 
 /**
  * Stands in for a Brain: the world calls forward() every step and gets
  * pedal and lane back, only these come from the keyboard or the
- * on-screen buttons instead of a network. Like a driver-assist stalk, a
- * tap left or right asks for the next lane over; the planner steers.
+ * on-screen buttons instead of a network. It drives like cruise control
+ * with a stalk: up raises the set speed, down brakes and the set speed
+ * follows the car down, a tap left or right asks for the next lane over
+ * and the planner steers.
  */
 export class Pilot {
   constructor() {
@@ -30,6 +42,7 @@ export class Pilot {
     this.output = [0, 0];
     this.lane = 0;
     this.laneHold = 0;
+    this.setSpeed = START_SET;
   }
 
   static control(code) {
@@ -62,15 +75,26 @@ export class Pilot {
   reset() {
     this.output = [0, 0];
     this.laneHold = 0;
+    this.setSpeed = START_SET;
   }
 
   active(control) {
     return this.held[control] || this.touches[control] > 0;
   }
 
-  forward() {
-    const pedalTarget = (this.active("gas") ? 1 : 0) - (this.active("brake") ? 1 : 0);
-    this.output[0] = approach(this.output[0], pedalTarget, PEDAL_RATE * DT);
+  forward(inputs) {
+    const v = inputs[15] * CAR_SPEC.maxSpeed;
+    let target;
+    let rate = PEDAL_RATE;
+    if (this.active("brake")) {
+      target = -1;
+      rate = BRAKE_RATE;
+      this.setSpeed = v;
+    } else {
+      if (this.active("gas")) this.setSpeed = Math.min(CAR_SPEC.maxSpeed, this.setSpeed + SET_RATE * DT);
+      target = Math.min(CRUISE_THROTTLE, Math.max(-CRUISE_BRAKE, (this.setSpeed - v) * CRUISE_GAIN));
+    }
+    this.output[0] = approach(this.output[0], target, rate * DT);
     this.output[1] = this.laneHold > 0 ? this.lane : 0;
     this.laneHold = Math.max(0, this.laneHold - DT);
     return this.output;

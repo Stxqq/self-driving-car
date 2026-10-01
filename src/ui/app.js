@@ -237,6 +237,8 @@ function updateChart(session) {
 
 const blinkers = { "-1": $('.blinker[data-side="left"]'), 1: $('.blinker[data-side="right"]') };
 const readoutState = $("#readout-state");
+const setLabel = $("#set-label");
+const setSpeed = $("#set-speed");
 function showPlanner(driver) {
   const { planner } = driver;
   for (const side of [-1, 1]) blinkers[side].classList.toggle("on", driver.alive && planner.signal === side);
@@ -281,6 +283,9 @@ function frame(now) {
   network.draw(session.network());
   if (anatomyVisible) anatomy.update(focus, k);
   showPlanner(focus);
+  const cruising = mode === "drive";
+  setLabel.textContent = cruising ? "Set" : "Max";
+  setSpeed.textContent = String(Math.round((cruising ? pilot.setSpeed : CAR_SPEC.maxSpeed) * 3.6));
   updateChart(session);
 
   counters.first.set(mode === "train" ? session.generation + 1 : session.runs);
@@ -435,7 +440,7 @@ if (heldOut) {
 }
 fact("weights", String(pretrained.weights.length));
 fact("inputs", String(pretrained.layers[0]));
-$("#set-speed").textContent = String(Math.round(CAR_SPEC.maxSpeed * 3.6));
+
 
 addEventListener("hashchange", () => switchMode(location.hash.slice(1)));
 setMode(location.hash.slice(1));
