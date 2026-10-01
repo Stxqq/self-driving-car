@@ -1,6 +1,8 @@
 // The network as a keyline drawing: every weight a hairline, blue when
 // positive and rose when negative, brighter where signal flows through it.
 
+import { SENSOR_CONFIG } from "../sim/world.js";
+
 const BLUE = "37,99,235";
 const ROSE = "219,39,119";
 const INK = "17,17,19";
@@ -10,8 +12,10 @@ const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 const STEPS = 8;
 const RADIUS = [2.2, 2.8, 3, 4];
 
-/** Input rows that start a group, labelled with their index. */
-export const INPUT_MARKS = [0, 11, 14, 28, 31];
+const RAYS = SENSOR_CONFIG.count + SENSOR_CONFIG.mirrors.length;
+// the first row of each group in the key under the canvas; heading (29)
+// sits too close to its neighbors for a label of its own
+const INPUT_MARKS = [0, SENSOR_CONFIG.count, RAYS, 2 * RAYS, 2 * RAYS + 2];
 
 export class NetworkView {
   constructor(canvas, { outputs = ["Pedal", "Steer"] } = {}) {

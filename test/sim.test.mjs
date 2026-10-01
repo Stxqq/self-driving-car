@@ -11,7 +11,7 @@ const randomBrains = (n, seed) => {
   return Array.from({ length: n }, () => Brain.random(DEFAULT_LAYERS, rng));
 };
 
-test("the road curves and is parameterised by arc length", () => {
+test("the road curves and is parameterized by arc length", () => {
   const road = new Road(42);
   road.extendTo(3000);
   const turn = Math.max(...road.headings) - Math.min(...road.headings);
