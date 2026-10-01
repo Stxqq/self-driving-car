@@ -24,6 +24,11 @@ const CURVE_SCALE = 100;
 const CURVE_LOOKAHEAD = 100;
 
 const START_S = 12;
+const GRID_ROW = 6;
+// a left lane counts as free on the right when the car there ahead is at
+// least this far off, and nobody is close behind
+const FREE_AHEAD = 60;
+const FREE_BEHIND = 15;
 
 const RULES = {
   // the sweeper: a line moving up the road at 18 km/h, anyone behind it is
@@ -36,7 +41,7 @@ const RULES = {
 };
 
 export class Driver {
-  constructor(brain, car, index, planner) {
+  constructor(brain, car, index, planner, start = START_S) {
     this.brain = brain;
     this.car = car;
     this.index = index;
@@ -46,17 +51,20 @@ export class Driver {
     this.alive = true;
     this.crashed = false;
     this.stalled = false;
-    this.s = START_S;
+    this.start = start;
+    this.s = start;
     this.d = 0;
     this.roadIndex = 0;
-    this.best = START_S;
+    this.best = start;
+    // seconds spent in a left lane while the lane to the right was free
+    this.lingered = 0;
     this.lastGain = 0;
     this.time = 0;
   }
 
   /** Meters of road covered, measured along the centerline. */
   get distance() {
-    return this.best - START_S;
+    return this.best - this.start;
   }
 }
 
@@ -66,22 +74,28 @@ export class Driver {
  * give the same trajectories.
  */
 export class World {
-  constructor({ seed, brains, traffic = true, density = 1, lanes = 3 }) {
+  constructor({ seed, brains, traffic = true, density = 1, lanes = 3, grid = false }) {
     this.seed = seed;
     this.time = 0;
     this.steps = 0;
     this.road = new Road(seed, { lanes });
-    this.traffic = traffic && density > 0 ? new Traffic(this.road, seed, { density }) : null;
+    // a grid start pushes the first traffic back so nobody starts inside it
+    const firstSpawn = grid ? START_S + GRID_ROW * Math.ceil(brains.length / lanes) + 60 : undefined;
+    this.traffic = traffic && density > 0 ? new Traffic(this.road, seed, { density, ...(grid && { firstSpawn }) }) : null;
     this.projection = { s: 0, d: 0, index: 0 };
     this.pose = { x: 0, y: 0, heading: 0 };
     this.road.extendTo(this.horizon() + 200);
 
-    const lane = Math.floor(lanes / 2);
-    const start = this.road.pose(START_S, this.road.laneOffset(lane), {});
+    // Everyone starts in the middle lane, on top of each other, which is
+    // what keeps a score comparable between cars. A grid start spreads them
+    // across the lanes in rows, for watching a whole population at once.
     this.drivers = brains.map((brain, i) => {
-      const driver = new Driver(brain, new Car(start.x, start.y, start.heading), i, new LanePlanner(lane, lanes));
+      const lane = grid ? i % lanes : Math.floor(lanes / 2);
+      const s = grid ? START_S + GRID_ROW * Math.floor(i / lanes) : START_S;
+      const pose = this.road.pose(s, this.road.laneOffset(lane), {});
+      const driver = new Driver(brain, new Car(pose.x, pose.y, pose.heading), i, new LanePlanner(lane, lanes), s);
       driver.d = this.road.laneOffset(lane);
-      driver.roadIndex = Math.floor(START_S / this.road.spacing);
+      driver.roadIndex = Math.floor(s / this.road.spacing);
       return driver;
     });
     this.alive = this.drivers.length;
@@ -129,6 +143,14 @@ export class World {
     inputs[j++] = clamp(road.sharpest(driver.s, driver.s + CURVE_LOOKAHEAD) * CURVE_SCALE, 0, 1);
     inputs[j++] = planner.shift;
     inputs[j++] = planner.changing ? 0 : planner.signal;
+
+    const right = scan.lanes[2];
+    if (
+      right.exists && !planner.changing &&
+      right.ahead.gap > FREE_AHEAD && right.ahead.gap >= scan.lanes[1].ahead.gap && right.behind.gap > FREE_BEHIND
+    ) {
+      driver.lingered += DT;
+    }
 
     const [pedal, lane] = driver.brain.forward(inputs);
     planner.update(lane, v, scan, DT);
@@ -203,5 +225,6 @@ export function runEpisode(brains, { seed, seconds = 90, maxDistance = Infinity,
     crashed: d.crashed,
     stalled: d.stalled,
     laneChanges: d.planner.changes,
+    lingered: d.lingered,
   }));
 }

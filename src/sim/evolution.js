@@ -4,10 +4,17 @@ import { Rng, deriveSeed } from "./rng.js";
 const CRASH_PENALTY = 300;
 // as bad as a crash, or parking becomes the safe strategy early on
 const STALL_PENALTY = 300;
+// meters per second spent in a left lane with a free lane to the right:
+// enough that keeping right wins over cruising, small next to what an
+// overtake gains
+const LINGER_PENALTY = 4;
 
-/** Meters of road covered, minus a flat penalty for how the run ended. */
+/**
+ * Meters of road covered, minus a flat penalty for how the run ended and a
+ * small one for every second spent cruising left of a free lane.
+ */
 export function fitness(outcome) {
-  let score = outcome.distance;
+  let score = outcome.distance - LINGER_PENALTY * (outcome.lingered ?? 0);
   if (outcome.crashed) score -= CRASH_PENALTY;
   if (outcome.stalled) score -= STALL_PENALTY;
   return score;
