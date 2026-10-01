@@ -3,7 +3,7 @@ import { Rng } from "../sim/rng.js";
 import { Anatomy } from "../render/anatomy.js";
 import { drawChart } from "../render/chart.js";
 import { NetworkView } from "../render/network.js";
-import { Stage } from "../render/stage.js";
+import { Stage, easeFactor } from "../render/stage.js";
 import { downloadBrain, readBrainFile, saveBrain, savedBrain } from "./brains.js";
 import { Counter } from "./counter.js";
 import { Pilot } from "./pilot.js";
@@ -11,11 +11,31 @@ import { DriveSession, POPULATION, SPEEDS, TrainSession, WatchSession, km } from
 
 const $ = (selector) => document.querySelector(selector);
 const motion = matchMedia("(prefers-reduced-motion: reduce)");
+const EASE = "cubic-bezier(.32,.72,0,1)";
 
-const [pretrained, results] = await Promise.all([
+// set up before the fetches below, so the text further down the page shows
+// up even if they fail
+const reveal = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      entry.target.classList.add("in");
+      reveal.unobserve(entry.target);
+    }
+  },
+  { rootMargin: "0px 0px -10% 0px" },
+);
+document.documentElement.classList.add("reveals");
+document.querySelectorAll(".reveal").forEach((el) => reveal.observe(el));
+
+const [pretrained, heldOut] = await Promise.all([
   fetch("src/brains/pretrained.json")
     .then((r) => r.json())
-    .then((json) => Brain.fromJSON(json)),
+    .then((json) => Brain.fromJSON(json))
+    .catch((err) => {
+      $("#caption-sub").textContent = "Couldn't load the pretrained brain";
+      throw err;
+    }),
   fetch("scripts/results.json")
     .then((r) => (r.ok ? r.json() : null))
     .catch(() => null),
@@ -67,6 +87,13 @@ const LABELS = {
   drive: { first: ["Attempt", ""], last: ["Best", "km", 2] },
 };
 
+function markPill(name) {
+  const links = [...document.querySelectorAll(".pill-btn")];
+  for (const link of links) link.setAttribute("aria-current", String(link.dataset.mode === name));
+  const active = links.find((link) => link.dataset.mode === name);
+  $(".pill-ind").style.transform = `translateX(${active.offsetLeft}px)`;
+}
+
 function setMode(next) {
   if (!create[next]) next = "watch";
   if (next === mode) return;
@@ -75,10 +102,7 @@ function setMode(next) {
   stageEl.dataset.mode = mode;
   pilot.release();
 
-  const links = [...document.querySelectorAll(".pill-btn")];
-  for (const link of links) link.setAttribute("aria-current", String(link.dataset.mode === mode));
-  const active = links.find((link) => link.dataset.mode === mode);
-  $(".pill-ind").style.transform = `translateX(${active.offsetLeft}px)`;
+  markPill(mode);
 
   const { first, last } = LABELS[mode];
   $("#first-label").textContent = first[0];
@@ -86,12 +110,44 @@ function setMode(next) {
   $("#last-label").textContent = last[0];
   $("#last-unit").textContent = last[1];
   counters.last.decimals = last[2];
-  for (const counter of Object.values(counters)) counter.value = null;
+  for (const counter of Object.values(counters)) counter.value = 0;
 
   shownWorld = null;
   chartKey = "";
   updateBrainStatus();
-  if (!motion.matches) canvas.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: "cubic-bezier(.32,.72,0,1)" });
+  if (!motion.matches) {
+    canvas.animate([{ opacity: 0, transform: "translateY(14px)" }, { opacity: 1, transform: "none" }], { duration: 450, easing: EASE });
+    const changed = [...document.querySelectorAll(".stats .stat, .chart-card, .controls > *")].filter((el) => el.offsetParent);
+    changed.forEach((el, i) =>
+      el.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], {
+        duration: 450,
+        delay: i * 50,
+        easing: EASE,
+        fill: "backwards",
+      }),
+    );
+  }
+}
+
+// the old road leaves before the new one comes in; another click while it
+// leaves only changes where it is going
+let leaving = null;
+let target = null;
+async function switchMode(next) {
+  target = create[next] ? next : "watch";
+  markPill(target);
+  if (leaving || target === mode) return;
+  if (!motion.matches) {
+    leaving = canvas.animate([{ opacity: 1 }, { opacity: 0, transform: "translateY(-10px)" }], {
+      duration: 220,
+      easing: EASE,
+      fill: "forwards",
+    });
+    await leaving.finished;
+  }
+  setMode(target);
+  leaving?.cancel();
+  leaving = null;
 }
 
 let shownWorld = null;
@@ -109,8 +165,8 @@ function updateCaption(world) {
 function updateBrainStatus() {
   const status = $("#brain-status");
   if (mode === "watch") {
-    status.textContent = watchSource === "Pretrained" && results
-      ? `Pretrained, ${km(results.meanMeters)} km mean on held-out roads`
+    status.textContent = watchSource === "Pretrained" && heldOut
+      ? `Pretrained, ${km(heldOut.meanMeters)} km mean on held-out roads`
       : watchSource;
   } else if (mode === "train") {
     const train = sessions.train;
@@ -127,13 +183,13 @@ function updateBrainStatus() {
 let chartKey = "";
 function updateChart(session) {
   const legend = $("#chart-legend");
-  const reference = results && { value: results.meanMeters, label: `network ${km(results.meanMeters)}` };
+  const reference = heldOut && { value: heldOut.meanMeters, label: `network ${km(heldOut.meanMeters)}` };
   let key;
-  let spec;
+  let chartFor;
   if (mode === "train") {
     const history = session.history;
     key = `train:${history.length}`;
-    spec = () => {
+    chartFor = () => {
       $("#chart-title").textContent = "Distance";
       $("#chart-note").textContent = "per generation";
       legend.innerHTML = '<i style="background:#111113"></i><span>best</span><i style="background:#9a9aa2"></i><span>mean</span>';
@@ -147,7 +203,7 @@ function updateChart(session) {
     };
   } else if (mode === "drive") {
     key = `drive:${session.distances.length}`;
-    spec = () => {
+    chartFor = () => {
       $("#chart-title").textContent = "Your runs";
       $("#chart-note").textContent = `${session.distances.length} so far`;
       legend.textContent = "Dashed: the pretrained network's mean on held-out roads.";
@@ -159,20 +215,22 @@ function updateChart(session) {
     };
   } else {
     key = "watch";
-    spec = () => {
+    chartFor = () => {
       $("#chart-title").textContent = "Held-out roads";
-      $("#chart-note").textContent = results ? `${results.runs.length} seeds · ${results.limits.seconds / 60} min` : "";
+      $("#chart-note").textContent = heldOut ? `${heldOut.runs.length} seeds · ${heldOut.limits.seconds / 60} min` : "";
       legend.textContent = "The pretrained brain on roads it never saw.";
       return {
-        series: [{ values: results ? results.runs.map((r) => r.meters) : [], stroke: "#111113", width: 1.25, dots: true }],
-        reference: reference && { ...reference, label: `mean ${km(results.meanMeters)}` },
+        series: [{ values: heldOut ? heldOut.runs.map((r) => r.meters) : [], stroke: "#111113", width: 1.25, dots: true }],
+        reference: reference && { ...reference, label: `mean ${km(heldOut.meanMeters)}` },
         empty: "No results file",
       };
     };
   }
   if (key === chartKey) return;
   chartKey = key;
-  drawChart(chart, spec());
+  const spec = chartFor();
+  legend.hidden = spec.series.every((s) => s.values.length === 0) && !spec.reference;
+  drawChart(chart, spec);
 }
 
 let anatomyVisible = false;
@@ -201,17 +259,18 @@ function frame(now) {
   }
   shownTime = world.time;
   const focus = session.focus;
+  const k = motion.matches ? 1 : easeFactor(0.085, dt);
   stage.draw(world, focus, simulated, { ghosts: mode === "train" });
   network.draw(session.network());
-  if (anatomyVisible) anatomy.update(focus, session.outputs());
+  if (anatomyVisible) anatomy.update(focus, session.outputs(), k);
   updateChart(session);
 
   counters.first.set(mode === "train" ? session.generation + 1 : session.runs);
   counters.distance.set(focus.distance / 1000);
   counters.speed.set(focus.car.speed * 3.6);
   counters.last.set(mode === "watch" ? focus.time : mode === "train" ? world.alive : session.best / 1000);
-  const k = motion.matches ? 1 : 1 - (1 - 0.085) ** (dt * 60);
   for (const counter of Object.values(counters)) counter.tick(k);
+  stageEl.dataset.ready = "";
 
   raf = requestAnimationFrame(frame);
 }
@@ -314,6 +373,8 @@ addEventListener("keydown", (event) => {
   if (mode !== "drive" || event.metaKey || event.ctrlKey || event.altKey) return;
   const control = Pilot.control(event.code);
   if (control) {
+    // the arrow keys would otherwise leave a focus ring on the Drive tab
+    if (document.activeElement?.closest(".pill")) document.activeElement.blur();
     pilot.press(control, true);
     event.preventDefault();
   } else if (event.code === "KeyR" && !event.repeat) {
@@ -343,16 +404,18 @@ for (const button of document.querySelectorAll("[data-control]")) {
   button.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
-if (results) {
-  const runs = results.runs;
-  const fact = (name, text) => ($(`[data-fact="${name}"]`).textContent = text);
-  fact("mean", `${km(results.meanMeters)} km`);
-  fact("finished", `${runs.filter((r) => r.ended === "time").length} of ${runs.length} roads`);
+const fact = (name, text) => document.querySelectorAll(`[data-fact="${name}"]`).forEach((el) => (el.textContent = text));
+if (heldOut) {
+  const runs = heldOut.runs;
+  fact("mean", `${km(heldOut.meanMeters)} km`);
+  fact("median", `${km(heldOut.medianMeters)} km`);
+  fact("survived", `${heldOut.survived} of ${runs.length} roads`);
   fact("speed", `${Math.round(runs.reduce((sum, r) => sum + r.kmh, 0) / runs.length)} km/h`);
+  fact("seeds", String(runs.length));
 }
-$('[data-fact="weights"]').textContent = String(pretrained.weights.length);
+fact("weights", String(pretrained.weights.length));
 
-addEventListener("hashchange", () => setMode(location.hash.slice(1)));
+addEventListener("hashchange", () => switchMode(location.hash.slice(1)));
 setMode(location.hash.slice(1));
 resize();
 raf = requestAnimationFrame(frame);

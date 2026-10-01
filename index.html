@@ -10,7 +10,14 @@
   <meta property="og:title" content="Self-driving car">
   <meta property="og:description" content="A small neural network that learned to drive a curvy highway through traffic by evolution. Watch it, train your own in the browser, or take the wheel.">
   <meta property="og:image" content="https://stxqq.github.io/self-driving-car/social.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="A black car on a white highway with its sensor rays, next to the network that drives it">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Self-driving car">
+  <meta name="twitter:description" content="A small neural network that learned to drive a curvy highway through traffic by evolution.">
+  <meta name="twitter:image" content="https://stxqq.github.io/self-driving-car/social.png">
+  <link rel="canonical" href="https://stxqq.github.io/self-driving-car/">
   <meta name="theme-color" content="#ffffff">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M9 30 13 2M23 30 19 2' stroke='%23111113' stroke-width='2.5' stroke-linecap='round'/%3E%3Crect x='13.5' y='15' width='5' height='9' rx='1.5' fill='%23111113'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://rsms.me/">
@@ -72,7 +79,7 @@
 
           <div class="hud-col">
             <div class="card net-card">
-              <div class="card-head"><b>Network</b><em>32 · 20 · 10 · 2</em></div>
+              <div class="card-head"><b>Network</b><em><span data-fact="weights">892</span> weights</em></div>
               <canvas class="net" id="net" role="img" aria-label="The network's weights and live activations"></canvas>
               <dl class="net-key">
                 <div><dt>00–10</dt><dd>rays ahead</dd></div>
@@ -95,7 +102,11 @@
               </div>
               <div class="ctl only-drive">
                 <small>Keys</small>
-                <p class="keys"><kbd>←</kbd><kbd>→</kbd> steer <kbd>↑</kbd> gas <kbd>↓</kbd> brake <kbd>R</kbd> again</p>
+                <p class="keys">
+                  <span><kbd>←</kbd><kbd>→</kbd></span><span>steer</span>
+                  <span><kbd>↑</kbd><kbd>↓</kbd></span><span>gas, brake</span>
+                  <span><kbd>R</kbd></span><span>again</span>
+                </p>
               </div>
               <div class="brain">
                 <small>Brain</small>
@@ -119,7 +130,7 @@
       </div>
     </section>
 
-    <section class="feed" aria-label="Anatomy">
+    <section class="feed reveal" aria-label="Anatomy">
       <figure>
         <div class="feed-tile feed-anno" id="anatomy" tabindex="0" aria-label="Anatomy of the car. Hover or focus for the spec sheet.">
           <div class="anno-frame car-frame">
@@ -150,24 +161,24 @@
               <div class="kl-axle" style="top: 80.7%"></div>
             </div>
 
-            <div class="anno-item ai-left" style="top: 50%">
-              <div class="anno-label"><em>01</em><b>Sensors</b><span>14 rays, 70 m ahead, 40 m back</span></div>
+            <div class="anno-item anno-left" style="top: 50%">
+              <div class="anno-label"><em>01</em><b>Sensors</b><span>14 rays, 70 m ahead</span></div>
               <i class="anno-line"></i><i class="anno-dot"></i>
             </div>
-            <div class="anno-item ai-right" style="top: 36%">
+            <div class="anno-item anno-right" style="top: 36%">
               <i class="anno-dot"></i><i class="anno-line"></i>
               <div class="anno-label"><em>02</em><b>Network</b><span>32 inputs, 892 weights</span></div>
             </div>
-            <div class="anno-item ai-left" style="top: 19.3%">
+            <div class="anno-item anno-left" style="top: 19.3%">
               <div class="anno-label"><em>03</em><b>Controls</b><span>Pedal and steer</span></div>
               <i class="anno-line"></i><i class="anno-dot"></i>
             </div>
-            <div class="anno-item ai-right" style="top: 92%">
+            <div class="anno-item anno-right" style="top: 92%">
               <i class="anno-dot"></i><i class="anno-line"></i>
-              <div class="anno-label"><em>04</em><b>Fitness</b><span>Meters gained, minus 300 for going out</span></div>
+              <div class="anno-label"><em>04</em><b>Fitness</b><span>Meters gained, −300 off road</span></div>
             </div>
           </div>
-          <div class="anno-hint">Hover for details</div>
+          <div class="anno-hint"><span class="on-hover">Hover for details</span><span class="on-touch">Tap for details</span></div>
         </div>
         <figcaption class="feed-caption">
           <h2>Anatomy</h2>
@@ -176,7 +187,7 @@
       </figure>
     </section>
 
-    <section class="column" aria-label="How it learns">
+    <section class="column reveal" aria-label="How it learns">
       <h2 class="dear">How it learns</h2>
       <p class="gray">
         Nobody shows the network how to drive. A population of random
@@ -194,17 +205,19 @@
       <p class="gray">
         The brain in Watch came out of a longer curriculum, run headless in
         Node: an empty road first, then traffic, then five-minute episodes.
-        These are its numbers on five roads it never saw.
+        These are its numbers on <span data-fact="seeds">30</span> roads it
+        never saw. Traffic doesn't see it and never makes room for it.
       </p>
       <div class="rows facts">
         <div class="row"><span>Mean distance</span><b data-fact="mean">–</b></div>
-        <div class="row"><span>Lasted the full five minutes</span><b data-fact="finished">–</b></div>
+        <div class="row"><span>Median distance</span><b data-fact="median">–</b></div>
+        <div class="row"><span>Never crashed or fell behind</span><b data-fact="survived">–</b></div>
         <div class="row"><span>Average speed</span><b data-fact="speed">–</b></div>
         <div class="row"><span>Weights</span><b data-fact="weights">–</b></div>
       </div>
     </section>
 
-    <footer class="footer">
+    <footer class="footer reveal">
       <div class="f-block">
         <div class="f-label">Source</div>
         <a class="f-value" href="https://github.com/Stxqq/self-driving-car">github.com/Stxqq/self-driving-car</a>
