@@ -7,8 +7,11 @@ export const CAR_SPEC = Object.freeze({
   wheelbase: 2.7,
   rearToCenter: 1.35,
   maxSpeed: 32,
-  maxAccel: 4.2,
-  maxBrake: 9,
+  // about 9.5 s from 0 to 100 km/h, a family hatchback rather than a sports car
+  maxAccel: 3.4,
+  maxBrake: 8,
+  // off the throttle the engine holds the car back a little
+  engineBrake: 0.35,
   maxSteer: 0.55,
   steerRate: 1.6,
   // cornering grip, m/s^2
@@ -54,7 +57,7 @@ export class Car {
     const v = this.speed;
 
     let accel = this.throttle * p.maxAccel - this.brake * p.maxBrake;
-    if (v > 0) accel -= p.rollingResistance + p.dragPerSpeed2 * v * v;
+    if (v > 0) accel -= p.rollingResistance + p.dragPerSpeed2 * v * v + (1 - this.throttle) * p.engineBrake;
     this.speed = clamp(v + accel * dt, 0, p.maxSpeed);
 
     const lateral = this.steer * p.maxLateralAccel;
