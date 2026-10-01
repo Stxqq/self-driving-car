@@ -75,6 +75,7 @@
               <div class="stat"><small>Distance</small><p><b id="distance">0.00</b><span>km</span></p></div>
               <div class="stat"><small>Speed</small><p><b id="speed">0</b><span>km/h</span></p></div>
               <div class="stat"><small id="last-label">Time</small><p><b id="last">0</b><span id="last-unit">s</span></p></div>
+              <div class="round only-train"><small>Round</small><span class="round-bar"><i id="round-fill"></i></span><em id="round-time">0 / 45 s</em></div>
             </div>
 
             <div class="card chart-card">
@@ -216,7 +217,7 @@
       </p>
       <ol class="rows steps">
         <li><em>01</em><span>Sixty cars with random weights start on the same road. The planner keeps each one in its lane, so even these drive; what they lack is any idea of when to brake or which lane to be in.</span></li>
-        <li><em>02</em><span>Each drives until it crashes, falls behind a line moving at 18 km/h, or a minute is up.</span></li>
+        <li><em>02</em><span>Each drives until it crashes, falls behind a line moving at 18 km/h, or the round is up. Rounds start at 45 s and grow by half each time a car is still driving at the end, up to five minutes.</span></li>
         <li><em>03</em><span>Its score is the distance covered, minus 300 m for going out early.</span></li>
         <li><em>04</em><span>The best four carry over. The rest are children of tournament winners, crossed and mutated.</span></li>
       </ol>

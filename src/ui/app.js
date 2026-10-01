@@ -194,7 +194,9 @@ function updateChart(session) {
     chartFor = () => {
       $("#chart-title").textContent = "Distance";
       $("#chart-note").textContent = "per generation";
-      legend.innerHTML = '<i style="background:#111113"></i><span>best</span><i style="background:#9a9aa2"></i><span>mean</span>';
+      const last = history.at(-1);
+      const tally = last ? `<br>Last round: ${last.survived} made it to ${last.seconds} s, ${last.crashed} crashed.` : "";
+      legend.innerHTML = `<i style="background:#111113"></i><span>best</span><i style="background:#9a9aa2"></i><span>mean</span>${tally}`;
       return {
         series: [
           { values: history.map((g) => g.mean), stroke: "#9a9aa2", width: 1.25 },
@@ -238,6 +240,8 @@ function updateChart(session) {
 const blinkers = { "-1": $('.blinker[data-side="left"]'), 1: $('.blinker[data-side="right"]') };
 const readoutState = $("#readout-state");
 const setLabel = $("#set-label");
+const roundFill = $("#round-fill");
+const roundTime = $("#round-time");
 const setSpeed = $("#set-speed");
 function showPlanner(driver) {
   const { planner } = driver;
@@ -283,6 +287,10 @@ function frame(now) {
   network.draw(session.network());
   if (anatomyVisible) anatomy.update(focus, k);
   showPlanner(focus);
+  if (mode === "train") {
+    roundFill.style.transform = `scaleX(${Math.min(1, world.time / session.roundSeconds).toFixed(4)})`;
+    roundTime.textContent = `${Math.floor(world.time)} / ${session.roundSeconds} s`;
+  }
   const cruising = mode === "drive";
   setLabel.textContent = cruising ? "Set" : "Max";
   setSpeed.textContent = String(Math.round((cruising ? pilot.setSpeed : CAR_SPEC.maxSpeed) * 3.6));

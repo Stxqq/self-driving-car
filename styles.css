@@ -102,6 +102,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-variant-numeric: tabular-nums;
 }
 .stat span { font-size: 14px; color: var(--gray); margin-left: 4px; }
+.round {
+  grid-column: 1 / -1;
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  padding-top: 12px; border-top: 1px solid var(--hairline);
+}
+.round small { font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gray); }
+.round-bar { position: relative; height: 3px; border-radius: 3px; background: var(--hairline); overflow: hidden; }
+.round-bar i { position: absolute; inset: 0; background: var(--ink); transform-origin: left; transform: scaleX(0); }
+.round em { font: 500 9px var(--mono); font-style: normal; color: rgba(17, 17, 19, .5); font-variant-numeric: tabular-nums; }
 
 .chart { display: block; width: 100%; height: 112px; margin-top: 10px; overflow: visible; }
 .chart-grid { stroke: var(--hairline); stroke-width: 1; }
