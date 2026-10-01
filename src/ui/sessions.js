@@ -8,7 +8,15 @@ import { DEFAULT_LAYERS, DT, World } from "../sim/world.js";
 const PAUSE_AFTER_RUN = 1.8;
 
 export const POPULATION = 60;
-export const EPISODE_SECONDS = 60;
+// a round starts short and grows each time a car is still driving when
+// the clock runs out, so early rounds are quick and later ones have room
+// to show how far the best car can really go
+export const FIRST_ROUND = 45;
+export const LONGEST_ROUND = 300;
+const ROUND_GROWTH = 1.5;
+// sixty cars is a small population; it settles faster than the headless
+// trainer's two hundred, and keeps more of the field
+const QUICK = { elite: 6, halfLife: 12, mutationRate: [0.12, 0.03], mutationScale: [0.35, 0.08] };
 export const SPEEDS = [1, 4, 16, 64];
 // meters another car has to gain on the one in focus to take the camera
 const LEAD_MARGIN = 25;
@@ -133,11 +141,13 @@ export class TrainSession {
     this.pending = 0;
     this.history = [];
     this.champion = null;
+    this.roundSeconds = FIRST_ROUND;
     this.evolution = new Evolution({
       layers: DEFAULT_LAYERS,
       size: POPULATION,
       seed: rng.uint(),
       ancestor,
+      ...QUICK,
       ...(ancestor && FINE_TUNE),
     });
     this.startGeneration();
@@ -184,7 +194,7 @@ export class TrainSession {
       }
       this.world.step();
       this.pending -= DT;
-      if (this.world.alive === 0 || this.world.time >= EPISODE_SECONDS) this.finishGeneration();
+      if (this.world.alive === 0 || this.world.time >= this.roundSeconds) this.finishGeneration();
     }
     this.follow();
   }
@@ -205,8 +215,18 @@ export class TrainSession {
     const summary = this.evolution.evolve(scores);
     this.champion = summary.champion;
     const best = Math.max(...distances);
-    this.history.push({ best, mean: distances.reduce((a, b) => a + b, 0) / distances.length });
-    this.say(`Generation ${summary.generation + 1} · best ${km(best)} km`);
+    const survived = this.world.alive;
+    const crashed = drivers.filter((d) => d.crashed).length;
+    this.history.push({
+      best,
+      mean: distances.reduce((a, b) => a + b, 0) / distances.length,
+      survived,
+      crashed,
+      seconds: this.roundSeconds,
+    });
+    const why = survived ? `time up, ${survived} still driving` : "everyone out";
+    this.say(`Generation ${summary.generation + 1} · ${why} · best ${km(best)} km`);
+    if (survived) this.roundSeconds = Math.min(LONGEST_ROUND, Math.round(this.roundSeconds * ROUND_GROWTH));
     this.startGeneration();
   }
 }
