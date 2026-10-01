@@ -13,3 +13,6 @@ node scripts/train.mjs --resume --seed 4 --generations 80 --density 0.75 --out "
 node scripts/train.mjs --resume --seed 5 --generations 150 --seconds 180 --seeds 5 --density 1 --out "$out" "$@"
 # last, long episodes so that a crash late in the run still costs something
 node scripts/train.mjs --resume --seed 6 --generations 100 --seconds 300 --seeds 5 --density 1 --out "$out" "$@"
+# fine-tuning on more roads per generation, after the sim stopped using **
+node scripts/train.mjs --resume --seed 7 --generations 60 --seconds 300 --seeds 6 --density 1 --out "$out" "$@"
+node scripts/train.mjs --resume --seed 8 --generations 60 --seconds 300 --seeds 10 --density 1 --out "$out" "$@"

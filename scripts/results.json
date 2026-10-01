@@ -10,42 +10,219 @@
     "seconds": 300,
     "meters": 6000
   },
-  "meanMeters": 3269,
+  "meanMeters": 4048,
+  "medianMeters": 4658,
+  "survived": 20,
   "runs": [
     {
       "seed": 9001,
-      "meters": 4540,
+      "meters": 4716,
       "seconds": 300,
-      "kmh": 54.5,
+      "kmh": 56.6,
       "ended": "time"
     },
     {
       "seed": 9002,
-      "meters": 1679,
-      "seconds": 109.7,
-      "kmh": 55.1,
+      "meters": 1792,
+      "seconds": 119.8,
+      "kmh": 53.8,
       "ended": "crashed"
     },
     {
       "seed": 9003,
-      "meters": 4534,
+      "meters": 4659,
       "seconds": 300,
-      "kmh": 54.4,
+      "kmh": 55.9,
       "ended": "time"
     },
     {
       "seed": 9004,
-      "meters": 4543,
+      "meters": 4723,
       "seconds": 300,
-      "kmh": 54.5,
+      "kmh": 56.7,
       "ended": "time"
     },
     {
       "seed": 9005,
-      "meters": 1049,
-      "seconds": 72.4,
-      "kmh": 52.2,
+      "meters": 4739,
+      "seconds": 300,
+      "kmh": 56.9,
+      "ended": "time"
+    },
+    {
+      "seed": 9006,
+      "meters": 4657,
+      "seconds": 300,
+      "kmh": 55.9,
+      "ended": "time"
+    },
+    {
+      "seed": 9007,
+      "meters": 3376,
+      "seconds": 212.8,
+      "kmh": 57.1,
       "ended": "crashed"
+    },
+    {
+      "seed": 9008,
+      "meters": 4657,
+      "seconds": 300,
+      "kmh": 55.9,
+      "ended": "time"
+    },
+    {
+      "seed": 9009,
+      "meters": 2064,
+      "seconds": 133.3,
+      "kmh": 55.7,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9010,
+      "meters": 4753,
+      "seconds": 300,
+      "kmh": 57,
+      "ended": "time"
+    },
+    {
+      "seed": 9011,
+      "meters": 4793,
+      "seconds": 300,
+      "kmh": 57.5,
+      "ended": "time"
+    },
+    {
+      "seed": 9012,
+      "meters": 4857,
+      "seconds": 300,
+      "kmh": 58.3,
+      "ended": "time"
+    },
+    {
+      "seed": 9013,
+      "meters": 4470,
+      "seconds": 300,
+      "kmh": 53.6,
+      "ended": "time"
+    },
+    {
+      "seed": 9014,
+      "meters": 3907,
+      "seconds": 247,
+      "kmh": 56.9,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9015,
+      "meters": 3770,
+      "seconds": 244.8,
+      "kmh": 55.4,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9016,
+      "meters": 4770,
+      "seconds": 300,
+      "kmh": 57.2,
+      "ended": "time"
+    },
+    {
+      "seed": 9017,
+      "meters": 3785,
+      "seconds": 239.2,
+      "kmh": 57,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9018,
+      "meters": 1390,
+      "seconds": 93,
+      "kmh": 53.8,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9019,
+      "meters": 1905,
+      "seconds": 122.3,
+      "kmh": 56.1,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9020,
+      "meters": 4663,
+      "seconds": 300,
+      "kmh": 56,
+      "ended": "time"
+    },
+    {
+      "seed": 9021,
+      "meters": 1731,
+      "seconds": 112.6,
+      "kmh": 55.4,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9022,
+      "meters": 4754,
+      "seconds": 300,
+      "kmh": 57,
+      "ended": "time"
+    },
+    {
+      "seed": 9023,
+      "meters": 3643,
+      "seconds": 231.7,
+      "kmh": 56.6,
+      "ended": "crashed"
+    },
+    {
+      "seed": 9024,
+      "meters": 4497,
+      "seconds": 300,
+      "kmh": 54,
+      "ended": "time"
+    },
+    {
+      "seed": 9025,
+      "meters": 4802,
+      "seconds": 300,
+      "kmh": 57.6,
+      "ended": "time"
+    },
+    {
+      "seed": 9026,
+      "meters": 4813,
+      "seconds": 300,
+      "kmh": 57.8,
+      "ended": "time"
+    },
+    {
+      "seed": 9027,
+      "meters": 4669,
+      "seconds": 300,
+      "kmh": 56,
+      "ended": "time"
+    },
+    {
+      "seed": 9028,
+      "meters": 4800,
+      "seconds": 300,
+      "kmh": 57.6,
+      "ended": "time"
+    },
+    {
+      "seed": 9029,
+      "meters": 4559,
+      "seconds": 300,
+      "kmh": 54.7,
+      "ended": "time"
+    },
+    {
+      "seed": 9030,
+      "meters": 4740,
+      "seconds": 300,
+      "kmh": 56.9,
+      "ended": "time"
     }
   ]
 }
